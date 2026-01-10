@@ -146,7 +146,7 @@
            <Area></Area>
            <Load>true</Load>
            <OverrideMemArea>false</OverrideMemArea>
-           <Path>..\..\..\TriCore Debug (GCC)\mes1_esw_mcs_project_template.elf</Path>
+           <Path>..\..\..\TriCore Debug (GCC)\mes1_esw_mcs_project_bubble_level.elf</Path>
            <PgmDestination>memory</PgmDestination>
            <TargetDir></TargetDir>
            <UseDefaultMSID>true</UseDefaultMSID>
@@ -252,7 +252,7 @@
            <Area></Area>
            <Load>true</Load>
            <OverrideMemArea>false</OverrideMemArea>
-           <Path>..\..\..\TriCore Debug (GCC)\mes1_esw_mcs_project_template.elf</Path>
+           <Path>..\..\..\TriCore Debug (GCC)\mes1_esw_mcs_project_bubble_level.elf</Path>
            <PgmDestination>memory</PgmDestination>
            <TargetDir></TargetDir>
            <UseDefaultMSID>true</UseDefaultMSID>
@@ -773,7 +773,7 @@
     <RegVer>1297424384</RegVer>
     <Project_Local>
      <Project.0>
-      <DefaultTargetName>ADS - Debug</DefaultTargetName>
+      <DefaultTargetName></DefaultTargetName>
      </Project.0>
     </Project_Local>
    </REG_ROOT>
