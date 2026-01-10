@@ -29,14 +29,16 @@
 #include "IfxCpu.h"
 #include "IfxScuWdt.h"
 
+#include <tc275_shared_IPC.h>
+
+#include <string.h>
+#include <stdio.h>
+#include <IfxStm.h>
+
 extern IfxCpu_syncEvent cpuSyncEvent;
 
-#if !defined(IFX_CFG_RETURN_FROM_MAIN)
 void core2_main (void)
 {
-#else
-	int core2_main (void)
-#endif
     IfxCpu_enableInterrupts();
     /*
      * !!WATCHDOG2 IS DISABLED HERE!!
@@ -47,11 +49,25 @@ void core2_main (void)
     /* Cpu sync event wait*/
     IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
-    #if !defined(IFX_CFG_RETURN_FROM_MAIN)
+
+    initUART();                             /* Initialize the UART module      */
+
+
+    char message_buffer[64];
     while (1)
     {
+        if(g_SharedData.pipeline_state == STATE_WAITING_FOR_CORE2)
+                {
+                    // WORK: Print the value
+                    // (Use your specific UART print function here)
+                    // Example: printf("Received: %d\n", g_SharedData.data_value);
+                sprintf(message_buffer, "Core2 Received: %d\r\n", (int)g_SharedData.data_value);
+                uart_sendMessage(message_buffer, (uint32)strlen(message_buffer));
+                    delayMS(100);
+                    // SIGNAL: Reset the loop back to Core 1 (State 0)
+                    g_SharedData.pipeline_state = STATE_WAITING_FOR_CORE1;
+                }
+
     }
-#else
-    return 0;
-#endif
+
 }
