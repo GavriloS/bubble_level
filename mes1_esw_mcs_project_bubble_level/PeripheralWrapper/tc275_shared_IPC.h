@@ -1,5 +1,5 @@
 /**********************************************************************************************************************
- * \file Cpu0_Main.c
+ * \file tc275_shared_IPC.h
  * \copyright Copyright (C) Infineon Technologies AG 2019
  * 
  * Use of this file is subject to the terms of use agreed between (i) you or the company in which ordinary course of 
@@ -25,89 +25,45 @@
  * IN THE SOFTWARE.
  *********************************************************************************************************************/
 
+#ifndef PERIPHERALWRAPPER_TC275_SHARED_IPC_H_
+#define PERIPHERALWRAPPER_TC275_SHARED_IPC_H_
+
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
-#include "Ifx_Types.h"
-#include "IfxCpu.h"
-#include "IfxScuWdt.h"
+#include <Ifx_Types.h>
 
-#include <string.h>
-#include <tc275_uart_app.h>
 
-#include <tc275_shared_IPC.h>
-#include <stdio.h>
-#include <IfxStm.h>
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
-IfxCpu_syncEvent cpuSyncEvent= 0;
-
-extern void core1_main(void);
-extern void core2_main(void);
+#define STATE_WAITING_FOR_CORE1  0
+#define STATE_WAITING_FOR_CORE0  1
+#define STATE_WAITING_FOR_CORE2  2
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
 
-Shared_Data_t g_SharedData = {0, STATE_WAITING_FOR_CORE1};
 
+/*********************************************************************************************************************/
+/*-------------------------------------------------Data Structures---------------------------------------------------*/
+/*********************************************************************************************************************/
+
+
+typedef struct {
+    volatile uint32 data_value; // The integer being passed around
+    volatile uint8  pipeline_state; // 0=Core1's turn, 1=Core0's turn, 2=Core2's turn
+} Shared_Data_t;
+ 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
+extern Shared_Data_t g_SharedData;
 
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-void delayMS(uint32 ms){
-    uint32 stmFreq = IfxScuCcu_getStmFrequency();
-    uint64 ticks = ((uint64)stmFreq * ms) / 1000;
-    uint32 startTime = IfxStm_getLower(&MODULE_STM0);
-    while((IfxStm_getLower(&MODULE_STM0) - startTime) < ticks){
-        //busy wait, blocking
-    }
-}
-
-/*********************************************************************************************************************/
-/*-------------------------------------------------------Main--------------------------------------------------------*/
-/*********************************************************************************************************************/
 
 
-
-void core0_main (void)
-{
-
-    IfxCpu_enableInterrupts();
-    /*
-     * !!WATCHDOG0 AND SAFETY WATCHDOG ARE DISABLED HERE!!
-     * Enable the watchdog in the demo if it is required and also service the watchdog periodically
-     * */
-    IfxScuWdt_disableCpuWatchdog (IfxScuWdt_getCpuWatchdogPassword ());
-    IfxScuWdt_disableSafetyWatchdog (IfxScuWdt_getSafetyWatchdogPassword ());
-
-    //wake up other cores
-    IfxCpu_startCore(&MODULE_CPU1, (void*)&core1_main);
-    IfxCpu_startCore(&MODULE_CPU2, (void*)&core2_main);
-
-    /* Cpu sync event wait*/
-    IfxCpu_emitEvent(&cpuSyncEvent);
-    IfxCpu_waitEvent(&cpuSyncEvent, 1);
-
-    while (1)
-    {
-
-        if(g_SharedData.pipeline_state == STATE_WAITING_FOR_CORE0)
-                {
-                    // WORK: (Optional) You could modify/verify data here
-                    // For now, we just act as a bridge.
-
-                    // SIGNAL: Pass control to Core 2 (State 2)
-                    g_SharedData.pipeline_state = STATE_WAITING_FOR_CORE2;
-                }
-    }
-
-}
-
-/*********************************************************************************************************************/
-/*---------------------------------------------Function Implementations----------------------------------------------*/
-/*********************************************************************************************************************/
+#endif /* PERIPHERALWRAPPER_TC275_SHARED_IPC_H_ */

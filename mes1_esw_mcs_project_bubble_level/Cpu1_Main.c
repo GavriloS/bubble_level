@@ -31,14 +31,14 @@
 
 #include <tc275_led_app.h>
 
+#include <tc275_shared_IPC.h>
+#include <IfxStm.h>
+
 extern IfxCpu_syncEvent cpuSyncEvent;
 
-#if !defined(IFX_CFG_RETURN_FROM_MAIN)
+
 void core1_main (void)
 {
-#else
-	int core1_main (void)
-#endif
     IfxCpu_enableInterrupts();
     /*
      * !!WATCHDOG1 IS DISABLED HERE!!
@@ -50,14 +50,18 @@ void core1_main (void)
     IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
-    initLED();  /* Initialize the LED port pin      */
+    uint32 local_counter = 0;
 
-#if !defined(IFX_CFG_RETURN_FROM_MAIN)
     while (1)
     {
-        blinkLED(); /* Make the LED blink           */
+        if(g_SharedData.pipeline_state == STATE_WAITING_FOR_CORE1)
+                {
+                    // WORK: Create the data
+                    local_counter++;
+                    g_SharedData.data_value = local_counter;
+
+                    // SIGNAL: Pass control to Core 0 (State 1)
+                    g_SharedData.pipeline_state = STATE_WAITING_FOR_CORE0;
+                }
     }
-#else
-    return 0;
-#endif
 }
