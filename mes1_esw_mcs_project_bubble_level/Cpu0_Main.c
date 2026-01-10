@@ -24,44 +24,155 @@
  * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
  * IN THE SOFTWARE.
  *********************************************************************************************************************/
-
 #include "Ifx_Types.h"
 #include "IfxCpu.h"
 #include "IfxScuWdt.h"
+#include "IfxQspi_SpiMaster.h"
+#include "IfxPort.h"
 
-#include <string.h>
-#include <tc275_uart_app.h>
+// --- PINS (Geprüft: P13.2 ist korrekt für Slot 2 DC) ---
+#define OLED_RST_PORT   &MODULE_P10
+#define OLED_RST_PIN    4
+#define OLED_DC_PORT    &MODULE_P13
+#define OLED_DC_PIN     2
 
-IfxCpu_syncEvent cpuSyncEvent= 0;
+
+static IfxQspi_SpiMaster spiMaster;
+static IfxQspi_SpiMaster_Channel spiChannel;
+
+// SPI Pins
+#define SPI_SCLK_PIN    IfxQspi1_SCLK_P10_2_OUT
+#define SPI_MOSI_PIN    IfxQspi1_MTSR_P10_3_OUT
+#define SPI_MISO_PIN    IfxQspi1_MRSTA_P10_1_IN
+#define SPI_CS_PIN      IfxQspi1_SLSO9_P10_5_OUT
+
+
+
+// --- Helper ---
+void delay_dummy(volatile uint32 count) {
+    while(count--) __asm("nop");
+}
+
+// --- SPI Funktionen ---
+void SPI_Setup(void) {
+    // 1. GPIO
+    IfxPort_setPinModeOutput(OLED_RST_PORT, OLED_RST_PIN, IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
+    IfxPort_setPinModeOutput(OLED_DC_PORT, OLED_DC_PIN, IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
+    IfxPort_setPinHigh(OLED_RST_PORT, OLED_RST_PIN);
+
+    // 2. SPI Modul Konfiguration
+    IfxQspi_SpiMaster_Config spiConfig;
+    IfxQspi_SpiMaster_initModuleConfig(&spiConfig, &MODULE_QSPI1);
+    const IfxQspi_SpiMaster_Pins pins = {
+        .sclk = &SPI_SCLK_PIN, .mtsr = &SPI_MOSI_PIN, .mrst = &SPI_MISO_PIN,
+        .pinDriver = IfxPort_PadDriver_cmosAutomotiveSpeed1
+    };
+    spiConfig.pins = &pins;
+    IfxQspi_SpiMaster_initModule(&spiMaster, &spiConfig);
+
+    // 3. Channel Konfiguration
+    IfxQspi_SpiMaster_ChannelConfig channelConfig;
+    IfxQspi_SpiMaster_initChannelConfig(&channelConfig, &spiMaster);
+
+    // --- KORREKTUR HIER: Zugriff über .ch ---
+    channelConfig.ch.baudrate = 1000000; // 1 MHz
+
+    // Chip Select Pin
+    channelConfig.sls.output.pin = (IfxQspi_Slso_Out *)&SPI_CS_PIN;
+    channelConfig.sls.output.mode = IfxPort_OutputMode_pushPull;
+    channelConfig.sls.output.driver = IfxPort_PadDriver_cmosAutomotiveSpeed1;
+
+    // Optional: Mode Anpassung (falls nötig, hier über .ch.mode)
+    // Standard ist meist okay, wir lassen es erstmal auf Default.
+    // Falls nötig: channelConfig.ch.mode.clockPolarity = ...
+
+    IfxQspi_SpiMaster_initChannel(&spiChannel, &channelConfig);
+}
+
+void WriteByte(uint8 data) {
+    IfxQspi_SpiMaster_exchange(&spiChannel, &data, NULL, 1);
+}
+
+void Cmd(uint8 c) {
+    IfxPort_setPinLow(OLED_DC_PORT, OLED_DC_PIN);
+    WriteByte(c);
+}
+
+void Data(uint8 d) {
+    IfxPort_setPinHigh(OLED_DC_PORT, OLED_DC_PIN);
+    WriteByte(d);
+}
+
+// --- Display Logic ---
+void Init_Display_Exakt_Wie_BSP(void) {
+    // Hardware Reset
+    IfxPort_setPinHigh(OLED_RST_PORT, OLED_RST_PIN); delay_dummy(100000);
+    IfxPort_setPinLow(OLED_RST_PORT, OLED_RST_PIN);  delay_dummy(100000);
+    IfxPort_setPinHigh(OLED_RST_PORT, OLED_RST_PIN); delay_dummy(500000);
+
+    // Init Sequenz aus deinem BSP Code
+    Cmd(0xFD); Data(0x12); // Unlock
+    Cmd(0xFD); Data(0xB1); // Unlock
+    Cmd(0xAE);             // Sleep ON
+
+    // REMAP
+    Cmd(0xA0); Data(0x32);
+
+    Cmd(0xCA); Data(0x5F); // Mux 95
+    Cmd(0xA1); Data(0x80); // Start Line
+    Cmd(0xA2); Data(0x20); // Offset
+    Cmd(0xAB); Data(0x01); // Function
+    Cmd(0xB3); Data(0xF1); // Clock
+    Cmd(0xC1); Data(0x8A); Data(0x51); Data(0x8A); // Contrast
+    Cmd(0xC7); Data(0xCF); // Master Contrast
+    Cmd(0xB1); Data(0x32); // Precharge
+    Cmd(0xB2); Data(0xA0); Data(0xB5); Data(0x55); // Enhancement
+    Cmd(0xB6); Data(0x01); // Precharge 2
+    Cmd(0xAF);             // Display ON
+
+    delay_dummy(100000);
+}
+
+void Fill_Green(void) {
+    // Column Set: 16 bis 16+95 (Offset!)
+    Cmd(0x15); Data(16); Data(16 + 95);
+    // Row Set: 0 bis 95
+    Cmd(0x75); Data(0); Data(95);
+
+    Cmd(0x5C); // Write RAM
+
+    IfxPort_setPinHigh(OLED_DC_PORT, OLED_DC_PIN); // Data Mode
+
+    for(int i = 0; i < 96 * 96; i++) {
+        // Grün (RGB565 = 0000 0111 1110 0000 = 0x07E0)
+        WriteByte(0x07);
+        WriteByte(0xE0);
+    }
+}
 
 #if !defined(IFX_CFG_RETURN_FROM_MAIN)
 void core0_main (void)
 {
 #else
-	int core0_main (void)
+    int core0_main (void)
 #endif
-	uint8 message[]="Hello World\n";
-	Ifx_SizeT msg_size = 0;
-
     IfxCpu_enableInterrupts();
     /*
-     * !!WATCHDOG0 AND SAFETY WATCHDOG ARE DISABLED HERE!!
+     * !!WATCHDOG2 IS DISABLED HERE!!
      * Enable the watchdog in the demo if it is required and also service the watchdog periodically
      * */
     IfxScuWdt_disableCpuWatchdog (IfxScuWdt_getCpuWatchdogPassword ());
-    IfxScuWdt_disableSafetyWatchdog (IfxScuWdt_getSafetyWatchdogPassword ());
 
-    /* Cpu sync event wait*/
-    IfxCpu_emitEvent(&cpuSyncEvent);
-    IfxCpu_waitEvent(&cpuSyncEvent, 1);
+    // Setup
+    SPI_Setup();
 
-    initUART();                             /* Initialize the UART module      */
-    msg_size = strlen((char *)&message);    /* determine string length      */
+    // Init & Test
+    Init_Display_Exakt_Wie_BSP();
 
     #if !defined(IFX_CFG_RETURN_FROM_MAIN)
-    while (1)
-    {
-        uart_sendMessage(&message[0], msg_size); /* send entire message */
+    while (1) {
+        Fill_Green();
+        delay_dummy(10000000); // Warten
     }
 #else
     return 0;
