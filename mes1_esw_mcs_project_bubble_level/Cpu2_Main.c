@@ -37,6 +37,10 @@
 
 extern IfxCpu_syncEvent cpuSyncEvent;
 
+void draw_rectangle(c6dofimu14_axis_t *data, uint16 color){
+    oledc_rectangle(data->x, data->y, data->x+6, data->y+6, color);
+}
+
 void core2_main (void)
 {
     IfxCpu_enableInterrupts();
@@ -61,9 +65,13 @@ void core2_main (void)
     c6dofimu14_axis_t display_data = {0};
     uint32 last_update = 0;
 
+    int rec_w = 6;
+    int rec_h = 6;
 
     while (1)
     {
+        draw_rectangle(&display_data, OLEDC_COLOR_BLACK);
+
         // 1. READ from Core 0
         if (IfxCpu_acquireMutex(&g_SharedMem_C0_to_C2.mutex))
         {
@@ -76,26 +84,15 @@ void core2_main (void)
         }
 
         // 2. UPDATE SCREEN
-        // Clear previous bubble (simple way: redraw center black, or full clear)
-        // Ideally, optimize this to only clear old pos. For now, fill black is safe but flickery.
-        oledc_fill_screen(OLEDC_COLOR_BLACK);
+
         oledc_hud();
 
-        // Calculate Position (Map -10..10 tilt to 0..96 pixels)
-        // Center is 48.
-        int pos_x = 48 + (int)(display_data.x * 4);
-        int pos_y = 48 + (int)(display_data.y * 4);
-
-        // Clamp to screen edges
-        if(pos_x < 0) pos_x = 0; if(pos_x > 90) pos_x = 90;
-        if(pos_y < 0) pos_y = 0; if(pos_y > 90) pos_y = 90;
+        // TODO: Calculate Position
 
         // Draw Bubble
-        oledc_rectangle(pos_x, pos_y, pos_x+6, pos_y+6, OLEDC_COLOR_RED);
+        draw_rectangle(&display_data, OLEDC_COLOR_RED);
 
-        // Limit Framerate (~20 FPS)
-        IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 50));
-
+        IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 10));
     }
 
 }

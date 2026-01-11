@@ -46,6 +46,7 @@
 #define OLED_RST  &MODULE_P10, 4
 #define OLED_DC   &MODULE_P13, 2
 
+/*
 // --- Driver Constants (From your oled.c) ---
 #define _OLEDC_SCREEN_WIDTH     0x96 // 96
 #define _OLEDC_SCREEN_HEIGHT    0x96 // 96
@@ -59,12 +60,17 @@
 #define _OLEDC_COMMAND_LOCK     0xFD
 #define _OLEDC_SLEEP_ON         0xAE
 #define _OLEDC_SLEEP_OFF        0xAF
+*/
 
 /*
 *********************************************************************************************************
 *                                             REMAMP
 *********************************************************************************************************
 */
+
+#define HIGH 1
+#define LOW 0
+
 #define _OLEDC_RMP_INC_HOR         0x00
 #define _OLEDC_RMP_INC_VER         0x01
 #define _OLEDC_RMP_COLOR_NOR       0x00
@@ -84,18 +90,18 @@
 *********************************************************************************************************
 *                                             OLED SETTINGS
 *********************************************************************************************************
-
+*/
 const uint8  _OLEDC_SCREEN_WIDTH    = 0x60;
 const uint8  _OLEDC_SCREEN_HEIGHT   = 0x60;
 const uint8 _OLEDC_SCREEN_SIZE     = 0x2400;
-
 #define  _OLEDC_ROW_OFF          0x00
 #define  _OLEDC_COL_OFF          0x10
 
-
+/*
 *********************************************************************************************************
 *                                             COMMANDS
 *********************************************************************************************************
+*/
 
 const uint8  _OLEDC_SET_COL_ADDRESS   = 0x15;
 const uint8  _OLEDC_SET_ROW_ADDRESS   = 0x75;
@@ -142,7 +148,7 @@ static uint8 _OLEDC_DEFAULT_VCOMH          = 0x05;
 static uint8 _OLEDC_DEFAULT_MASTER_CONT    = 0xCF;
 static uint8 _OLEDC_DEFAULT_PRECHARGE_2    = 0x01;
 
-static uint8 cols[ 2 ]    = { _OLEDC_COL_OFF, _OLEDC_COL_OFF + 95 };
+static uint8 cols[ 2 ]    = { _OLEDC_COL_OFF, _OLEDC_COL_OFF + 95 };          
 static uint8 rows[ 2 ]    = { _OLEDC_ROW_OFF, _OLEDC_ROW_OFF + 95 };
 
 static uint8 _OLEDC_DEFAULT_REMAP = _OLEDC_RMP_INC_HOR | _OLEDC_RMP_COLOR_REV |
@@ -158,9 +164,8 @@ static uint16          _font_orientation;
 static uint16         _font_first_char;
 static uint16         _font_last_char;
 static uint16         _font_height;
-//static uint16         x_cord;
-//static uint16         y_cord;
-*/
+static uint16         x_cord;
+static uint16         y_cord;
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
@@ -191,16 +196,22 @@ void delay_ms(uint32 ms) {
 // --- Helper: Send Command/Data ---
 void oledc_command(uint8 cmd, uint8 *args, uint16 args_len) {
     // 1. Send Command Byte
+    //IfxPort_setPinLow(OLED_CS);
     IfxPort_setPinLow(OLED_DC); // DC Low = Command
+
     IfxQspi_SpiMaster_exchange(&g_qspiChannel, &cmd, NULL_PTR, 1);
     while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
 
+    IfxPort_setPinHigh(OLED_DC); // DC Low = Command
+
     // 2. Send Arguments (if any)
     if (args_len > 0 && args != NULL_PTR) {
-        IfxPort_setPinHigh(OLED_DC); // DC High = Data (Args are data)
+        // IfxPort_setPinHigh(OLED_DC); // DC High = Data (Args are data)
         IfxQspi_SpiMaster_exchange(&g_qspiChannel, args, NULL_PTR, args_len);
         while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
     }
+
+    //IfxPort_setPinHigh(OLED_CS);
 }
 
 void oledc_reset(void) {
@@ -250,22 +261,60 @@ void init_QSPI1_Module(void) {
     IfxQspi_SpiMaster_initChannel(&g_qspiChannel, &channelConfig);
 }
 
+/**
+ * @brief OLED C enable
+ *
+ * @param[in] state (1 = on, 0 = off)
+ *
+ * Set the enable pin high or low, aka on or off
+ */
+void oledc_enable(uint8 state){
+    IfxPort_setPinHigh(OLED_DC);
+}
 
 // --- OLED C INIT SEQUENCE ---
 void oledc_init(void) {
+
+    oledc_reset();
+    
+    oledc_command( _OLEDC_COMMAND_LOCK,    &_OLEDC_DEFAULT_OLED_LOCK,     1 );
+    oledc_command( _OLEDC_COMMAND_LOCK,    &_OLEDC_DEFAULT_CMD_LOCK,      1 );
+    oledc_command( _OLEDC_SLEEP_ON,        0,                      0 );
+    
+    oledc_command( _OLEDC_SET_REMAP,       &_OLEDC_DEFAULT_REMAP,         1 );
+    oledc_command( _OLEDC_MUX_RATIO,       &_OLEDC_DEFAULT_MUX_RATIO,     1 );
+    oledc_command( _OLEDC_SET_START_LINE,  &_OLEDC_DEFAULT_START_LINE,    1 );
+    oledc_command( _OLEDC_SET_OFFSET,      &_OLEDC_DEFAULT_OFFSET,        1 );
+    oledc_command( _OLEDC_VCOMH,           &_OLEDC_DEFAULT_VCOMH,         1 );
+    oledc_command( _OLEDC_CLOCK_DIV,       &_OLEDC_DEFAULT_DIVSET,        1 );
+    oledc_command( _OLEDC_SET_RESET_PRECH, &_OLEDC_DEFAULT_PRECHARGE,     1 );
+    oledc_command( _OLEDC_SETSEC_PRECH,    &_OLEDC_DEFAULT_PRECHARGE_2,   1 );
+    oledc_command( _OLEDC_MASTER_CONTRAST, &_OLEDC_DEFAULT_MASTER_CONT,   1 );
+    oledc_command( _OLEDC_CONTRAST,        _OLEDC_DEFAULT_CONTRAST,       3 );
+    oledc_command( _OLEDC_VSL,             _OLEDC_DEFAULT_VSL,            3 );
+
+    oledc_command(_OLEDC_MODE_NORMAL, 0, 0);
+    
+    oledc_command(_OLEDC_SLEEP_OFF, 0, 0);
+    
+    /* old stuff*/
+    /*
+    //oledc_enable(HIGH);
     oledc_reset();
 
     uint8 val_lock_1 = 0x12; oledc_command(_OLEDC_COMMAND_LOCK, &val_lock_1, 1);
     uint8 val_lock_2 = 0xB1; oledc_command(_OLEDC_COMMAND_LOCK, &val_lock_2, 1);
     oledc_command(_OLEDC_SLEEP_ON, NULL_PTR, 0);
 
-    uint8 val_remap = 0x74;  oledc_command(0xA0, &val_remap, 1);
+    uint8 val_remap = 0x74;
+    oledc_command(0xA0, &val_remap, 1);
     uint8 val_mux   = 95;    oledc_command(0xCA, &val_mux, 1);
     uint8 val_start = 0x00;  oledc_command(0xA1, &val_start, 1);
     uint8 val_off   = 0x00;  oledc_command(0xA2, &val_off, 1);
     uint8 val_vcom  = 0x05;  oledc_command(0xBE, &val_vcom, 1);
 
     oledc_command(_OLEDC_SLEEP_OFF, NULL_PTR, 0);
+    */
 }
 
 // --- Drawing Functions ---
