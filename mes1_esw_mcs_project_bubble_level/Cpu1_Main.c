@@ -61,9 +61,9 @@ void core1_main (void)
         sim_y += 1;
         sim_z += 1;
 
-        if(sim_x > 10) sim_x = -10;
-        if(sim_y > 10) sim_y = -10;
-        if(sim_y > 10) sim_y = -10;
+        if(sim_x > 60) sim_x = 0;
+        if(sim_y > 60) sim_y = 0;
+        if(sim_y > 60) sim_y = 0;
 
         // 2. WRITE to Shared Memory (C1 -> C0)
         // Try to acquire the lock

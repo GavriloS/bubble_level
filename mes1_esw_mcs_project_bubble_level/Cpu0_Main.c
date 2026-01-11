@@ -94,13 +94,13 @@ void core0_main (void)
 
     // --- DRAWING TEST ---
     // 1. Black Background
-    oledc_fill_screen(OLEDC_COLOR_BLACK);
+    //oledc_fill_screen(OLEDC_COLOR_BLACK);
 
     // 2. Green Crosshair
-    oledc_hud();
+    //oledc_hud();
 
     // 3. Red Bubble in Center
-    oledc_rectangle(44, 44, 52, 52, OLEDC_COLOR_RED);
+    // oledc_rectangle(44, 44, 52, 52, OLEDC_COLOR_RED);
 
     c6dofimu14_axis_t local_buffer;
 
