@@ -10,20 +10,15 @@
 /*********************************************************************************************************************/
 #include "Ifx_Types.h"
 #include "IfxCpu.h"
+#include "tc275_common_structs.h"
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Data Structures---------------------------------------------------*/
 /*********************************************************************************************************************/
 
-// 1. Define the actual data needed for a Bubble Level
-typedef struct {
-    float accel_x;  // Tilt on X-axis
-    float accel_y;  // Tilt on Y-axis
-} Bubble_Data_t;
-
 // 2. Define the Shared Memory Container (Data + Protection)
 typedef struct {
-    volatile Bubble_Data_t  data;    // The sensor values
+    volatile c6dofimu14_axis_t  data;    // The sensor values
     volatile IfxCpu_mutexLock mutex; // The lock to protect this memory [cite: 19]
     volatile uint32 update_count;    // Optional: Increment this on write so reader knows data is new
 } Shared_Memory_Block_t;

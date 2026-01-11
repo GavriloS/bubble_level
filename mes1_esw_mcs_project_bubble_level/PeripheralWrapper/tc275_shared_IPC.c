@@ -54,14 +54,14 @@
 // ACTUAL MEMORY ALLOCATION
 // These sit in global memory accessible by all cores.
 
-// Core 1 writes here, Core 0 reads here.
+// 1. Shared Memory between Core 1 (Producer) and Core 0 (Broker)
 volatile Shared_Memory_Block_t g_SharedMem_C1_to_C0 = {
     .data = {0.0f, 0.0f},
     .mutex = 0,
     .update_count = 0
 };
 
-// Core 0 writes here, Core 2 reads here.
+// 2. Shared Memory between Core 0 (Broker) and Core 2 (Consumer)
 volatile Shared_Memory_Block_t g_SharedMem_C0_to_C2 = {
     .data = {0.0f, 0.0f},
     .mutex = 0,

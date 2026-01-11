@@ -28,14 +28,16 @@
 #include "Ifx_Types.h"
 #include "IfxCpu.h"
 #include "IfxScuWdt.h"
-
-#include <tc275_led_app.h>
-
 #include <tc275_shared_IPC.h>
 #include <IfxStm.h>
 
 extern IfxCpu_syncEvent cpuSyncEvent;
 
+
+// Dummy sensor values for testing
+sint16 sim_x = 0;
+sint16 sim_y = 0;
+sint16 sim_z = 0;
 
 void core1_main (void)
 {
@@ -47,21 +49,37 @@ void core1_main (void)
     IfxScuWdt_disableCpuWatchdog (IfxScuWdt_getCpuWatchdogPassword ());
 
     /* Cpu sync event wait*/
-    IfxCpu_emitEvent(&cpuSyncEvent);
+    //IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
     uint32 local_counter = 0;
 
     while (1)
     {
-        if(g_SharedData.pipeline_state == STATE_WAITING_FOR_CORE1)
-                {
-                    // WORK: Create the data
-                    local_counter++;
-                    g_SharedData.data_value = local_counter;
+        // 1. Simulate changing sensor data (Bubble moving)
+        sim_x += 1;
+        sim_y += 1;
+        sim_z += 1;
 
-                    // SIGNAL: Pass control to Core 0 (State 1)
-                    g_SharedData.pipeline_state = STATE_WAITING_FOR_CORE0;
-                }
+        if(sim_x > 10) sim_x = -10;
+        if(sim_y > 10) sim_y = -10;
+        if(sim_y > 10) sim_y = -10;
+
+        // 2. WRITE to Shared Memory (C1 -> C0)
+        // Try to acquire the lock
+        if (IfxCpu_acquireMutex(&g_SharedMem_C1_to_C0.mutex))
+        {
+            // Critical Section
+            g_SharedMem_C1_to_C0.data.x = sim_x;
+            g_SharedMem_C1_to_C0.data.y = sim_y;
+            //g_SharedMem_C1_to_C0.data.z = sim_z;
+            g_SharedMem_C1_to_C0.update_count++;
+
+            // Release lock
+            IfxCpu_releaseMutex(&g_SharedMem_C1_to_C0.mutex);
+        }
+
+        // Wait a bit (simulate 100Hz sensor rate)
+        IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 10));
     }
 }
