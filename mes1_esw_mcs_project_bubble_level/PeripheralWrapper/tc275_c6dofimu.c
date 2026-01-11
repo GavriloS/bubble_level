@@ -215,6 +215,7 @@ void c6dofimu14_read_accel_axis(c6dofimu14_axis_t *axis) {
         // Using your map function logic
         axis->x = map(raw_x, C6DOFIMU14_ACCEL_MIN, C6DOFIMU14_ACCEL_MAX, OLED_X_MIN, OLED_X_MAX);
         axis->y = map(raw_y, C6DOFIMU14_ACCEL_MIN, C6DOFIMU14_ACCEL_MAX, OLED_Y_MIN, OLED_Y_MAX);
+        axis->y = OLED_Y_MAX - axis->y;
         axis->z = map(raw_z, C6DOFIMU14_ACCEL_MIN, C6DOFIMU14_ACCEL_MAX, OLED_X_MIN, OLED_X_MAX);
     }
 }

@@ -54,24 +54,22 @@ void core1_main (void)
 
     uint32 local_counter = 0;
 
+    c6dofimu14_init();
+    c6dofimu14_axis_t axis = {0,0,0};
+
     while (1)
     {
-        // 1. Simulate changing sensor data (Bubble moving)
-        sim_x += 1;
-        sim_y += 1;
-        sim_z += 1;
 
-        if(sim_x > 60) sim_x = 0;
-        if(sim_y > 60) sim_y = 0;
-        if(sim_y > 60) sim_y = 0;
+        c6dofimu14_read_accel_axis(&axis);
+
 
         // 2. WRITE to Shared Memory (C1 -> C0)
         // Try to acquire the lock
         if (IfxCpu_acquireMutex(&g_SharedMem_C1_to_C0.mutex))
         {
             // Critical Section
-            g_SharedMem_C1_to_C0.data.x = sim_x;
-            g_SharedMem_C1_to_C0.data.y = sim_y;
+            g_SharedMem_C1_to_C0.data.x = axis.x;
+            g_SharedMem_C1_to_C0.data.y = axis.y;
             //g_SharedMem_C1_to_C0.data.z = sim_z;
             g_SharedMem_C1_to_C0.update_count++;
 
@@ -80,6 +78,6 @@ void core1_main (void)
         }
 
         // Wait a bit (simulate 100Hz sensor rate)
-        IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 10));
+        IfxStm_waitTicks(&MODULE_STM1, IfxStm_getTicksFromMilliseconds(&MODULE_STM1, 10));
     }
 }
