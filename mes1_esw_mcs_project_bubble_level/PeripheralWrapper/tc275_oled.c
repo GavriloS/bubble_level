@@ -240,22 +240,22 @@ void oled_sendCommand(uint8 command) {
 }
 
 
-void oledc_command(CPU_INT08U command, CPU_INT08U *args, CPU_INT16U args_len){
-    CPU_INT08U *ptr = args;
-
-    hal_gpio_csSet(LOW);
-    hal_gpio_dcSet(LOW);
-
-    hal_spiWrite(&command, 1);
-
-    hal_gpio_dcSet(HIGH);
-
-    if(args_len){
-        hal_spiWrite(ptr, args_len);
-    }
-
-    hal_gpio_csSet(HIGH);
-}
+//void oledc_command(CPU_INT08U command, CPU_INT08U *args, CPU_INT16U args_len){
+//    CPU_INT08U *ptr = args;
+//
+//    hal_gpio_csSet(LOW);
+//    hal_gpio_dcSet(LOW);
+//
+//    hal_spiWrite(&command, 1);
+//
+//    hal_gpio_dcSet(HIGH);
+//
+//    if(args_len){
+//        hal_spiWrite(ptr, args_len);
+//    }
+//
+//    hal_gpio_csSet(HIGH);
+//}
 
 void oled_sendData(uint8 data) {
     IfxPort_setPinHigh(OLED_DC); // Data mode
