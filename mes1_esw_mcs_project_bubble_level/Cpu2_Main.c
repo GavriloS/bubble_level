@@ -24,16 +24,16 @@
  * CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS 
  * IN THE SOFTWARE.
  *********************************************************************************************************************/
-
 #include "Ifx_Types.h"
 #include "IfxCpu.h"
 #include "IfxScuWdt.h"
-
-#include <tc275_shared_IPC.h>
-
-#include <string.h>
+#include "IfxStm.h"
+#include "tc275_oled.h"
+#include "tc275_uart_app.h"
+#include "tc275_shared_IPC.h"
 #include <stdio.h>
-#include <IfxStm.h>
+
+#include "tc275_common_structs.h"
 
 extern IfxCpu_syncEvent cpuSyncEvent;
 
@@ -47,26 +47,54 @@ void core2_main (void)
     IfxScuWdt_disableCpuWatchdog (IfxScuWdt_getCpuWatchdogPassword ());
 
     /* Cpu sync event wait*/
-    IfxCpu_emitEvent(&cpuSyncEvent);
+    //IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
-    initUART();                             /* Initialize the UART module      */
+    // Hardware Init
+    init_QSPI1_Module();
+    init_OLED_GPIO();
+    oledc_init();
+
+    oledc_fill_screen(OLEDC_COLOR_BLACK);
+    oledc_hud();
+
+    c6dofimu14_axis_t display_data = {0};
+    uint32 last_update = 0;
 
 
-    char message_buffer[64];
     while (1)
     {
-        if(g_SharedData.pipeline_state == STATE_WAITING_FOR_CORE2)
-                {
-                    // WORK: Print the value
-                    // (Use your specific UART print function here)
-                    // Example: printf("Received: %d\n", g_SharedData.data_value);
-                sprintf(message_buffer, "Core2 Received: %d\r\n", (int)g_SharedData.data_value);
-                uart_sendMessage(message_buffer, (uint32)strlen(message_buffer));
-                    delayMS(100);
-                    // SIGNAL: Reset the loop back to Core 1 (State 0)
-                    g_SharedData.pipeline_state = STATE_WAITING_FOR_CORE1;
-                }
+        // 1. READ from Core 0
+        if (IfxCpu_acquireMutex(&g_SharedMem_C0_to_C2.mutex))
+        {
+            // Only update if count changed
+            if(g_SharedMem_C0_to_C2.update_count != last_update) {
+                display_data = g_SharedMem_C0_to_C2.data;
+                last_update = g_SharedMem_C0_to_C2.update_count;
+            }
+            IfxCpu_releaseMutex(&g_SharedMem_C0_to_C2.mutex);
+        }
+
+        // 2. UPDATE SCREEN
+        // Clear previous bubble (simple way: redraw center black, or full clear)
+        // Ideally, optimize this to only clear old pos. For now, fill black is safe but flickery.
+        oledc_fill_screen(OLEDC_COLOR_BLACK);
+        oledc_hud();
+
+        // Calculate Position (Map -10..10 tilt to 0..96 pixels)
+        // Center is 48.
+        int pos_x = 48 + (int)(display_data.x * 4);
+        int pos_y = 48 + (int)(display_data.y * 4);
+
+        // Clamp to screen edges
+        if(pos_x < 0) pos_x = 0; if(pos_x > 90) pos_x = 90;
+        if(pos_y < 0) pos_y = 0; if(pos_y > 90) pos_y = 90;
+
+        // Draw Bubble
+        oledc_rectangle(pos_x, pos_y, pos_x+6, pos_y+6, OLEDC_COLOR_RED);
+
+        // Limit Framerate (~20 FPS)
+        IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 50));
 
     }
 

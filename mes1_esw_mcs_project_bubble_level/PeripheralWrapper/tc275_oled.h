@@ -43,6 +43,15 @@
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
+// --- Colors (RGB565) ---
+#define OLEDC_COLOR_BLACK   0x0000
+#define OLEDC_COLOR_WHITE   0xFFFF
+#define OLEDC_COLOR_RED     0xF800
+#define OLEDC_COLOR_GREEN   0x07E0
+#define OLEDC_COLOR_BLUE    0x001F
+#define OLEDC_COLOR_CYAN    0x07FF
+#define OLEDC_COLOR_MAGENTA 0xF81F
+#define OLEDC_COLOR_YELLOW  0xFFE0
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
@@ -59,12 +68,15 @@
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-// Function Prototypes
+// --- Function Prototypes ---
 void init_QSPI1_Module(void);
 void init_OLED_GPIO(void);
-void oled_init(void);
-void oled_sendCommand(uint8 command);
-void oled_sendData(uint8 data);
-void oled_fillScreen(uint8 pattern);
+void oledc_init(void);
+
+// Drawing Functions
+void oledc_fill_screen(uint16 color);
+void oledc_rectangle(uint8 start_col, uint8 start_row, uint8 end_col, uint8 end_row, uint16 color);
+void oledc_line(uint8 x1, uint8 y1, uint8 x2, uint8 y2, uint16 color);
+void oledc_hud(void); // Draws the crosshair
 
 #endif /* TC275_OLED_H_ */

@@ -31,6 +31,8 @@
 /*********************************************************************************************************************/
 #include "tc275_oled.h"
 #include "IfxQspi_SpiMaster.h"
+#include "IfxPort.h"
+#include "IfxStm.h" // For delay
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -39,12 +41,24 @@
 #define IFX_INTPRIO_QSPI1_RX  11
 #define IFX_INTPRIO_QSPI1_ER  12
 
+// --- Hardware Pin Definitions (From your Slot 2 Diagram) ---
+// Reset = P10.4, DC = P13.2
 #define OLED_RST  &MODULE_P10, 4
 #define OLED_DC   &MODULE_P13, 2
 
-const uint8  _OLEDC_FO_HORIZONTAL       = 0x00;
-const uint8   _OLEDC_FO_VERTICAL         = 0x01;
-const uint8   _OLEDC_FO_VERTICAL_COLUMN  = 0x02;
+// --- Driver Constants (From your oled.c) ---
+#define _OLEDC_SCREEN_WIDTH     0x96 // 96
+#define _OLEDC_SCREEN_HEIGHT    0x96 // 96
+#define _OLEDC_ROW_OFF          0x00
+#define _OLEDC_COL_OFF          0x10 // Offset is critical for proper centering
+
+// --- Commands ---
+#define _OLEDC_SET_COL_ADDRESS  0x15
+#define _OLEDC_SET_ROW_ADDRESS  0x75
+#define _OLEDC_WRITE_RAM        0x5C
+#define _OLEDC_COMMAND_LOCK     0xFD
+#define _OLEDC_SLEEP_ON         0xAE
+#define _OLEDC_SLEEP_OFF        0xAF
 
 /*
 *********************************************************************************************************
@@ -70,7 +84,7 @@ const uint8   _OLEDC_FO_VERTICAL_COLUMN  = 0x02;
 *********************************************************************************************************
 *                                             OLED SETTINGS
 *********************************************************************************************************
-*/
+
 const uint8  _OLEDC_SCREEN_WIDTH    = 0x60;
 const uint8  _OLEDC_SCREEN_HEIGHT   = 0x60;
 const uint8 _OLEDC_SCREEN_SIZE     = 0x2400;
@@ -78,11 +92,11 @@ const uint8 _OLEDC_SCREEN_SIZE     = 0x2400;
 #define  _OLEDC_ROW_OFF          0x00
 #define  _OLEDC_COL_OFF          0x10
 
-/*
+
 *********************************************************************************************************
 *                                             COMMANDS
 *********************************************************************************************************
-*/
+
 const uint8  _OLEDC_SET_COL_ADDRESS   = 0x15;
 const uint8  _OLEDC_SET_ROW_ADDRESS   = 0x75;
 const uint8  _OLEDC_WRITE_RAM         = 0x5C;
@@ -146,6 +160,7 @@ static uint16         _font_last_char;
 static uint16         _font_height;
 //static uint16         x_cord;
 //static uint16         y_cord;
+*/
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
@@ -168,145 +183,140 @@ IFX_INTERRUPT(qspi1TxISR, 0, IFX_INTPRIO_QSPI1_TX) { IfxQspi_SpiMaster_isrTransm
 IFX_INTERRUPT(qspi1RxISR, 0, IFX_INTPRIO_QSPI1_RX) { IfxQspi_SpiMaster_isrReceive(&g_qspi); }
 IFX_INTERRUPT(qspi1ErISR, 0, IFX_INTPRIO_QSPI1_ER) { IfxQspi_SpiMaster_isrError(&g_qspi); }
 
+// --- Helper: Delay ---
+void delay_ms(uint32 ms) {
+    IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, ms));
+}
+
+// --- Helper: Send Command/Data ---
+void oledc_command(uint8 cmd, uint8 *args, uint16 args_len) {
+    // 1. Send Command Byte
+    IfxPort_setPinLow(OLED_DC); // DC Low = Command
+    IfxQspi_SpiMaster_exchange(&g_qspiChannel, &cmd, NULL_PTR, 1);
+    while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
+
+    // 2. Send Arguments (if any)
+    if (args_len > 0 && args != NULL_PTR) {
+        IfxPort_setPinHigh(OLED_DC); // DC High = Data (Args are data)
+        IfxQspi_SpiMaster_exchange(&g_qspiChannel, args, NULL_PTR, args_len);
+        while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
+    }
+}
+
+void oledc_reset(void) {
+    IfxPort_setPinHigh(OLED_RST);
+    IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 1));
+    IfxPort_setPinLow(OLED_RST);
+    IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 1));
+    IfxPort_setPinHigh(OLED_RST);
+    IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 100));
+}
+
+// --- Initialization ---
+void init_OLED_GPIO(void) {
+    IfxPort_setPinModeOutput(OLED_RST, IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
+    IfxPort_setPinModeOutput(OLED_DC,  IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
+    IfxPort_setPinHigh(OLED_RST);
+}
 
 void init_QSPI1_Module(void) {
     IfxQspi_SpiMaster_Config spiMasterConfig;
-    // Initialize default values
     IfxQspi_SpiMaster_initModuleConfig(&spiMasterConfig, &MODULE_QSPI1);
 
-    // --- 1. Module Configuration (No .base) ---
     spiMasterConfig.mode             = IfxQspi_Mode_master;
-    spiMasterConfig.maximumBaudrate  = 10000000; // 10 MHz
-    spiMasterConfig.txPriority       = IFX_INTPRIO_QSPI1_TX;
-    spiMasterConfig.rxPriority       = IFX_INTPRIO_QSPI1_RX;
-    spiMasterConfig.erPriority       = IFX_INTPRIO_QSPI1_ER;
+    spiMasterConfig.maximumBaudrate  = 20000000; // 20 MHz
+    spiMasterConfig.txPriority       = 10; // Ensure ISRs are installed in main!
+    spiMasterConfig.rxPriority       = 11;
+    spiMasterConfig.erPriority       = 12;
     spiMasterConfig.isrProvider      = IfxCpu_Irq_getTos(IfxCpu_getCoreIndex());
 
-    // --- 2. Pin Configuration (Using Designated Initializers) ---
-    // This format prevents "incompatible pointer" errors by explicitly naming fields
     const IfxQspi_SpiMaster_Pins pins = {
-        .sclk       = &IfxQspi1_SCLK_P10_2_OUT,
-        .sclkMode   = IfxPort_OutputMode_pushPull,
-
-        .mtsr       = &IfxQspi1_MTSR_P10_3_OUT,
-        .mtsrMode   = IfxPort_OutputMode_pushPull,
-
-        .mrst       = &IfxQspi1_MRSTA_P10_1_IN,
-        .mrstMode   = IfxPort_InputMode_pullUp,
-
-        .pinDriver  = IfxPort_PadDriver_cmosAutomotiveSpeed1
+        .sclk = &IfxQspi1_SCLK_P10_2_OUT, .sclkMode = IfxPort_OutputMode_pushPull,
+        .mtsr = &IfxQspi1_MTSR_P10_3_OUT, .mtsrMode = IfxPort_OutputMode_pushPull,
+        .mrst = &IfxQspi1_MRSTA_P10_1_IN, .mrstMode = IfxPort_InputMode_pullUp,
+        .pinDriver = IfxPort_PadDriver_cmosAutomotiveSpeed1
     };
     spiMasterConfig.pins = &pins;
-
-    // Initialize the Module
     IfxQspi_SpiMaster_initModule(&g_qspi, &spiMasterConfig);
 
-    // --- 3. Channel Configuration ---
     IfxQspi_SpiMaster_ChannelConfig channelConfig;
     IfxQspi_SpiMaster_initChannelConfig(&channelConfig, &g_qspi);
-
-    // Baudrate is inside the ".ch" structure in your library version
-    channelConfig.ch.baudrate = 5000000; // 5 MHz
-
-    // Chip Select Configuration (P10.5)
+    channelConfig.ch.baudrate = 10000000; // 10 MHz
     channelConfig.sls.output.pin    = &IfxQspi1_SLSO9_P10_5_OUT;
     channelConfig.sls.output.mode   = IfxPort_OutputMode_pushPull;
     channelConfig.sls.output.driver = IfxPort_PadDriver_cmosAutomotiveSpeed1;
+    channelConfig.ch.mode.dataHeading = IfxQspi_DataHeading_msbFirst; // Standard SPI
 
-    // Protocol Settings (inside .ch.mode)
-    channelConfig.ch.mode.clockPolarity = IfxQspi_ClockPolarity_idleLow;
-    channelConfig.ch.mode.shiftClock    = IfxQspi_ShiftClock_shiftTransmitDataOnTrailingEdge;
-    channelConfig.ch.mode.dataHeading   = IfxQspi_DataHeading_msbFirst;
-
-    // Initialize the Channel
     IfxQspi_SpiMaster_initChannel(&g_qspiChannel, &channelConfig);
 }
 
 
-void init_OLED_GPIO(void) {
-    // Set pins as Output Push-Pull
-    IfxPort_setPinModeOutput(OLED_RST, IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
-    IfxPort_setPinModeOutput(OLED_DC,  IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
+// --- OLED C INIT SEQUENCE ---
+void oledc_init(void) {
+    oledc_reset();
 
-    // Initial state: Keep Reset HIGH
-    IfxPort_setPinHigh(OLED_RST);
+    uint8 val_lock_1 = 0x12; oledc_command(_OLEDC_COMMAND_LOCK, &val_lock_1, 1);
+    uint8 val_lock_2 = 0xB1; oledc_command(_OLEDC_COMMAND_LOCK, &val_lock_2, 1);
+    oledc_command(_OLEDC_SLEEP_ON, NULL_PTR, 0);
+
+    uint8 val_remap = 0x74;  oledc_command(0xA0, &val_remap, 1);
+    uint8 val_mux   = 95;    oledc_command(0xCA, &val_mux, 1);
+    uint8 val_start = 0x00;  oledc_command(0xA1, &val_start, 1);
+    uint8 val_off   = 0x00;  oledc_command(0xA2, &val_off, 1);
+    uint8 val_vcom  = 0x05;  oledc_command(0xBE, &val_vcom, 1);
+
+    oledc_command(_OLEDC_SLEEP_OFF, NULL_PTR, 0);
 }
 
+// --- Drawing Functions ---
 
-void oled_sendCommand(uint8 command) {
-    IfxPort_setPinLow(OLED_DC);  // Command mode
-    IfxQspi_SpiMaster_exchange(&g_qspiChannel, &command, NULL_PTR, 1);
+// Setup the RAM window for writing
+// --- DRAWING LOGIC ---
+static void set_window(uint8 start_col, uint8 start_row, uint8 end_col, uint8 end_row) {
+    uint8 cols[2] = {_OLEDC_COL_OFF + start_col, _OLEDC_COL_OFF + end_col};
+    uint8 rows[2] = {_OLEDC_ROW_OFF + start_row, _OLEDC_ROW_OFF + end_row};
+
+    oledc_command(_OLEDC_SET_COL_ADDRESS, cols, 2);
+    oledc_command(_OLEDC_SET_ROW_ADDRESS, rows, 2);
+
+    uint8 cmd = _OLEDC_WRITE_RAM;
+    IfxPort_setPinLow(OLED_DC);
+    IfxQspi_SpiMaster_exchange(&g_qspiChannel, &cmd, NULL_PTR, 1);
     while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
+    IfxPort_setPinHigh(OLED_DC);
 }
 
+void oledc_rectangle(uint8 start_col, uint8 start_row, uint8 end_col, uint8 end_row, uint16 color) {
+    if (end_col >= _OLEDC_SCREEN_WIDTH) end_col = _OLEDC_SCREEN_WIDTH - 1;
+    if (end_row >= _OLEDC_SCREEN_HEIGHT) end_row = _OLEDC_SCREEN_HEIGHT - 1;
 
-//void oledc_command(CPU_INT08U command, CPU_INT08U *args, CPU_INT16U args_len){
-//    CPU_INT08U *ptr = args;
-//
-//    hal_gpio_csSet(LOW);
-//    hal_gpio_dcSet(LOW);
-//
-//    hal_spiWrite(&command, 1);
-//
-//    hal_gpio_dcSet(HIGH);
-//
-//    if(args_len){
-//        hal_spiWrite(ptr, args_len);
-//    }
-//
-//    hal_gpio_csSet(HIGH);
-//}
+    set_window(start_col, start_row, end_col, end_row);
 
-void oled_sendData(uint8 data) {
-    IfxPort_setPinHigh(OLED_DC); // Data mode
-    IfxQspi_SpiMaster_exchange(&g_qspiChannel, &data, NULL_PTR, 1);
-    while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
-}
+    uint32 count = (end_col - start_col + 1) * (end_row - start_row + 1);
+    uint8 colorBytes[2] = {(color >> 8) & 0xFF, color & 0xFF};
 
-void oled_init(void) {
-    // Hardware Reset
-    IfxPort_setPinLow(OLED_RST);
-    // wait ~10ms
-    IfxPort_setPinHigh(OLED_RST);
-
-    // Initialization Sequence
-    oled_sendCommand(0xAE); // Display OFF
-    oled_sendCommand(0xD5); // Set Display Clock Divide Ratio
-    oled_sendCommand(0x80); // Suggested ratio
-    oled_sendCommand(0xA8); // Set Multiplex Ratio
-    oled_sendCommand(0x3F); // 1/64 duty
-    oled_sendCommand(0x8D); // Charge Pump
-    oled_sendCommand(0x14); // Enable charge pump
-    oled_sendCommand(0xAF); // Display ON
-}
-
-// Defines for Screen Size (Adjust if your Mikroe board is 96x39)
-#define OLED_WIDTH   96   // Standard Mikroe OLED Click width
-#define OLED_HEIGHT  96   // Standard Mikroe OLED Click height
-
-
-void oled_fillScreen(uint8 pattern) {
-    // 1. Set Memory Addressing Mode to Horizontal (0x00)
-    oled_sendCommand(0x20);
-    oled_sendCommand(0x00);
-
-    // 2. Set Column Address (Start at 0, End at 127)
-    // Even if screen is 96px, the controller supports 128 columns.
-    // It is safer to clear the whole buffer.
-    oled_sendCommand(0x21);
-    oled_sendCommand(0x00);
-    oled_sendCommand(0x7F); // 127
-
-    // 3. Set Page Address (Start at 0, End at 7)
-    oled_sendCommand(0x22);
-    oled_sendCommand(0x00);
-    oled_sendCommand(0x07);
-
-    // 4. Send Data Stream
-    // Total bytes = 128 columns * 8 pages = 1024 bytes
-    // We fill the entire controller RAM to be sure.
-    uint16 i;
-    for(i = 0; i < 1024; i++) {
-        oled_sendData(pattern);
+    for (uint32 i = 0; i < count; i++) {
+        IfxQspi_SpiMaster_exchange(&g_qspiChannel, colorBytes, NULL_PTR, 2);
+        while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
     }
+}
+
+void oledc_fill_screen(uint16 color) {
+    oledc_rectangle(0, 0, 95, 95, color);
+}
+
+void oledc_line(uint8 x1, uint8 y1, uint8 x2, uint8 y2, uint16 color) {
+    if (x1 == x2) {
+        if (y1 > y2) { uint8 t = y1; y1 = y2; y2 = t; }
+        oledc_rectangle(x1, y1, x1, y2, color);
+    } else if (y1 == y2) {
+        if (x1 > x2) { uint8 t = x1; x1 = x2; x2 = t; }
+        oledc_rectangle(x1, y1, x2, y1, color);
+    }
+}
+
+void oledc_hud(void) {
+    // Draw Green Crosshairs (Center is 48,48)
+    oledc_line(48, 0, 48, 95, OLEDC_COLOR_GREEN);
+    oledc_line(0, 48, 95, 48, OLEDC_COLOR_GREEN);
 }

@@ -1,5 +1,5 @@
 /**********************************************************************************************************************
- * \file Cpu0_Main.c
+ * \file tc275_shared_IPC.c
  * \copyright Copyright (C) Infineon Technologies AG 2019
  * 
  * Use of this file is subject to the terms of use agreed between (i) you or the company in which ordinary course of 
@@ -25,121 +25,45 @@
  * IN THE SOFTWARE.
  *********************************************************************************************************************/
 
+
 /*********************************************************************************************************************/
 /*-----------------------------------------------------Includes------------------------------------------------------*/
 /*********************************************************************************************************************/
-#include "Ifx_Types.h"
-#include "IfxCpu.h"
-#include "IfxScuWdt.h"
-#include "tc275_oled.h"
-#include "tc275_shared_IPC.h"
-#include "IfxStm.h"
 
-#include "tc275_common_structs.h"
-
-/************************************************************************************************/
+/*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
-IfxCpu_syncEvent cpuSyncEvent = 0;
-
-extern void core1_main(void);
-extern void core2_main(void);
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
-// Initialize shared data not static so other cores can see it
-//volatile Shared_Data_t g_SharedData = {0, STATE_WAITING_FOR_CORE1};
+
+/*********************************************************************************************************************/
+/*--------------------------------------------Private Variables/Constants--------------------------------------------*/
+/*********************************************************************************************************************/
 
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-void delayMS(uint32 ms){
-    uint32 stmFreq = IfxScuCcu_getStmFrequency();
-    uint64 ticks = ((uint64)stmFreq * ms) / 1000;
-    uint32 startTime = IfxStm_getLower(&MODULE_STM0);
-    while((IfxStm_getLower(&MODULE_STM0) - startTime) < ticks);
-}
-
-/*********************************************************************************************************************/
-/*-------------------------------------------------------Main--------------------------------------------------------*/
-/*********************************************************************************************************************/
-
-void core0_main (void)
-{
-    IfxCpu_enableInterrupts();
-
-    IfxScuWdt_disableCpuWatchdog (IfxScuWdt_getCpuWatchdogPassword ());
-    IfxScuWdt_disableSafetyWatchdog (IfxScuWdt_getSafetyWatchdogPassword ());
-
-    // Wake up other cores
-    IfxCpu_startCore(&MODULE_CPU1, (uint32)&core1_main);
-    IfxCpu_startCore(&MODULE_CPU2, (uint32)&core2_main);
-
-    /* Cpu sync event wait */
-    IfxCpu_emitEvent(&cpuSyncEvent);
-    IfxCpu_waitEvent(&cpuSyncEvent, 1);
-
-    // --- INITIALIZATION ---
-    // --- HARDWARE INIT ---
-    init_QSPI1_Module();
-    delayMS(50);
-
-    init_OLED_GPIO();
-    delayMS(50);
-
-    // --- OLED INIT (COLOR) ---
-    oledc_init(); // Fixed name!
-    delayMS(50);
-
-    // --- DRAWING TEST ---
-    // 1. Black Background
-    oledc_fill_screen(OLEDC_COLOR_BLACK);
-
-    // 2. Green Crosshair
-    oledc_hud();
-
-    // 3. Red Bubble in Center
-    oledc_rectangle(44, 44, 52, 52, OLEDC_COLOR_RED);
-
-    c6dofimu14_axis_t local_buffer;
-
-    while (1)
-    {
-        // ---------------------------------------------------------------------
-        // STEP 1: READ from Core 1 (Producer)
-        // ---------------------------------------------------------------------
-        boolean gotNewData = FALSE;
-
-        // Fix: Cast to (IfxCpu_mutexLock*) to satisfy compiler warning
-        if (IfxCpu_acquireMutex((IfxCpu_mutexLock*)&g_SharedMem_C1_to_C0.mutex))
-        {
-            local_buffer = g_SharedMem_C1_to_C0.data; // Copy data locally
-            IfxCpu_releaseMutex((IfxCpu_mutexLock*)&g_SharedMem_C1_to_C0.mutex);
-            gotNewData = TRUE;
-        }
-
-        // ---------------------------------------------------------------------
-        // STEP 2: WRITE to Core 2 (Consumer)
-        // ---------------------------------------------------------------------
-        if (gotNewData)
-        {
-            // Here you would also send to UART (USB)...
-
-            // Forward to Core 2
-            // Fix: Cast to (IfxCpu_mutexLock*) for the blocking wait
-            while (!IfxCpu_acquireMutex((IfxCpu_mutexLock*)&g_SharedMem_C0_to_C2.mutex));
-
-            g_SharedMem_C0_to_C2.data = local_buffer;
-            g_SharedMem_C0_to_C2.update_count++;
-
-            IfxCpu_releaseMutex((IfxCpu_mutexLock*)&g_SharedMem_C0_to_C2.mutex);
-        }
-
-        // Run loop at reasonable speed (50Hz)
-        delayMS(20);}
-}
 
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
+#include "tc275_shared_IPC.h"
+
+// ACTUAL MEMORY ALLOCATION
+// These sit in global memory accessible by all cores.
+
+// 1. Shared Memory between Core 1 (Producer) and Core 0 (Broker)
+volatile Shared_Memory_Block_t g_SharedMem_C1_to_C0 = {
+    .data = {0.0f, 0.0f},
+    .mutex = 0,
+    .update_count = 0
+};
+
+// 2. Shared Memory between Core 0 (Broker) and Core 2 (Consumer)
+volatile Shared_Memory_Block_t g_SharedMem_C0_to_C2 = {
+    .data = {0.0f, 0.0f},
+    .mutex = 0,
+    .update_count = 0
+};
