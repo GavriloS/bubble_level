@@ -103,6 +103,7 @@ void core0_main (void)
     // oledc_rectangle(44, 44, 52, 52, OLEDC_COLOR_RED);
 
     c6dofimu14_axis_t local_buffer;
+    char buffer[64];
 
     while (1)
     {
@@ -112,32 +113,33 @@ void core0_main (void)
         boolean gotNewData = FALSE;
 
         // Fix: Cast to (IfxCpu_mutexLock*) to satisfy compiler warning
-        if (IfxCpu_acquireMutex((IfxCpu_mutexLock*)&g_SharedMem_C1_to_C0.mutex))
-        {
-            local_buffer = g_SharedMem_C1_to_C0.data; // Copy data locally
-            IfxCpu_releaseMutex((IfxCpu_mutexLock*)&g_SharedMem_C1_to_C0.mutex);
-            gotNewData = TRUE;
-        }
+        while(!IfxCpu_acquireMutex((IfxCpu_mutexLock*)&g_SharedMem_C1_to_C0.mutex));
 
+        local_buffer = g_SharedMem_C1_to_C0.data; // Copy data locally
+        IfxCpu_releaseMutex((IfxCpu_mutexLock*)&g_SharedMem_C1_to_C0.mutex);
+
+
+        delayMS(20);
         // ---------------------------------------------------------------------
         // STEP 2: WRITE to Core 2 (Consumer)
         // ---------------------------------------------------------------------
-        if (gotNewData)
-        {
-            // Here you would also send to UART (USB)...
 
-            // Forward to Core 2
-            // Fix: Cast to (IfxCpu_mutexLock*) for the blocking wait
-            while (!IfxCpu_acquireMutex((IfxCpu_mutexLock*)&g_SharedMem_C0_to_C2.mutex));
+        // Here you would also send to UART (USB)...
 
-            g_SharedMem_C0_to_C2.data = local_buffer;
-            g_SharedMem_C0_to_C2.update_count++;
+        // Forward to Core 2
+        // Fix: Cast to (IfxCpu_mutexLock*) for the blocking wait
+        while (!IfxCpu_acquireMutex((IfxCpu_mutexLock*)&g_SharedMem_C0_to_C2.mutex));
 
-            IfxCpu_releaseMutex((IfxCpu_mutexLock*)&g_SharedMem_C0_to_C2.mutex);
-        }
+        g_SharedMem_C0_to_C2.data = local_buffer;
+        g_SharedMem_C0_to_C2.update_count++;
+
+        IfxCpu_releaseMutex((IfxCpu_mutexLock*)&g_SharedMem_C0_to_C2.mutex);
+
+
 
         // Run loop at reasonable speed (50Hz)
-        delayMS(20);}
+        delayMS(20);
+    }
 }
 
 /*********************************************************************************************************************/

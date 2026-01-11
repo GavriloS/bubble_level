@@ -90,7 +90,13 @@ void core2_main (void)
         // TODO: Calculate Position
 
         // Draw Bubble
-        draw_rectangle(&display_data, OLEDC_COLOR_RED);
+        if(display_data.x > 43 && display_data.x < 53
+                && display_data.y > 43 && display_data.y < 53){
+            draw_rectangle(&display_data, OLEDC_COLOR_GREEN);
+        }
+        else{
+            draw_rectangle(&display_data, OLEDC_COLOR_RED);
+        }
 
         IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 10));
     }
