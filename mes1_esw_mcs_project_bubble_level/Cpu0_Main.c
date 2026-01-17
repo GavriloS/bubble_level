@@ -34,7 +34,7 @@
 #include "tc275_oled.h"
 #include "tc275_shared_IPC.h"
 #include "IfxStm.h"
-
+#include "string.h"
 #include "tc275_common_structs.h"
 
 /************************************************************************************************/
@@ -91,7 +91,7 @@ void core0_main (void)
     // --- OLED INIT (COLOR) ---
     oledc_init(); // Fixed name!
     delayMS(50);
-
+    initUART();
     // --- DRAWING TEST ---
     // 1. Black Background
     //oledc_fill_screen(OLEDC_COLOR_BLACK);
@@ -119,6 +119,11 @@ void core0_main (void)
         IfxCpu_releaseMutex((IfxCpu_mutexLock*)&g_SharedMem_C1_to_C0.mutex);
 
 
+
+        snprintf(buffer, sizeof(buffer),
+                 "x position: %d, y position: %d\n",
+                 local_buffer.x, local_buffer.y);
+        uart_sendMessage(buffer, strlen(buffer));
         delayMS(20);
         // ---------------------------------------------------------------------
         // STEP 2: WRITE to Core 2 (Consumer)
