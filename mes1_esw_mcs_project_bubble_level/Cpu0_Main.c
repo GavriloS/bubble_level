@@ -80,7 +80,6 @@ void core0_main (void)
     IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
-    // --- INITIALIZATION ---
     // --- HARDWARE INIT ---
     init_QSPI1_Module();
     delayMS(50);
@@ -92,15 +91,6 @@ void core0_main (void)
     oledc_init(); // Fixed name!
     delayMS(50);
     initUART();
-    // --- DRAWING TEST ---
-    // 1. Black Background
-    //oledc_fill_screen(OLEDC_COLOR_BLACK);
-
-    // 2. Green Crosshair
-    //oledc_hud();
-
-    // 3. Red Bubble in Center
-    // oledc_rectangle(44, 44, 52, 52, OLEDC_COLOR_RED);
 
     c6dofimu14_axis_t local_buffer;
     char buffer[64];
@@ -118,18 +108,14 @@ void core0_main (void)
         local_buffer = g_SharedMem_C1_to_C0.data; // Copy data locally
         IfxCpu_releaseMutex((IfxCpu_mutexLock*)&g_SharedMem_C1_to_C0.mutex);
 
-
-
-        snprintf(buffer, sizeof(buffer),
-                 "x position: %d, y position: %d\n",
-                 local_buffer.x, local_buffer.y);
-        uart_sendMessage(buffer, strlen(buffer));
-        delayMS(20);
         // ---------------------------------------------------------------------
         // STEP 2: WRITE to Core 2 (Consumer)
         // ---------------------------------------------------------------------
-
-        // Here you would also send to UART (USB)...
+        snprintf(buffer, sizeof(buffer),
+                 "X: %d, Y: %d\n",
+                 local_buffer.x, local_buffer.y);
+        uart_sendMessage(buffer, strlen(buffer));
+        delayMS(20);
 
         // Forward to Core 2
         // Fix: Cast to (IfxCpu_mutexLock*) for the blocking wait

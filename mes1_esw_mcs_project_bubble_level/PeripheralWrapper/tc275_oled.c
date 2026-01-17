@@ -366,6 +366,6 @@ void oledc_line(uint8 x1, uint8 y1, uint8 x2, uint8 y2, uint16 color) {
 
 void oledc_hud(void) {
     // Draw Green Crosshairs (Center is 48,48)
-    oledc_line(48, 0, 48, 95, OLEDC_COLOR_GREEN);
-    oledc_line(0, 48, 95, 48, OLEDC_COLOR_GREEN);
+    oledc_line(48, 0, 48, 95, OLEDC_COLOR_WHITE);
+    oledc_line(0, 48, 95, 48, OLEDC_COLOR_WHITE);
 }

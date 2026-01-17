@@ -37,8 +37,24 @@
 
 extern IfxCpu_syncEvent cpuSyncEvent;
 
-void draw_rectangle(c6dofimu14_axis_t *data, uint16 color){
-    oledc_rectangle(data->x, data->y, data->x+6, data->y+6, color);
+void draw_bubble(c6dofimu14_axis_t *data, uint16 color){
+    // 1. Offset berechnen (-2 Pixel)
+    // WICHTIG: In 'int' umwandeln, damit wir negative Zahlen prüfen können!
+    int start_x = (int)data->x - 3;
+    int start_y = (int)data->y - 3;
+
+    // 2. Sicherheits-Check (Clamping)
+    // Wenn durch den Offset eine negative Zahl entsteht, setzen wir sie auf 0.
+    if (start_x < 0) start_x = 0;
+    if (start_y < 0) start_y = 0;
+
+    // Sicherheit nach oben/rechts (damit wir nicht über 95 malen)
+    if (start_x > 89) start_x = 89; // 95 - 6 Pixel Größe
+    if (start_y > 89) start_y = 89;
+
+    // 3. Zeichnen
+    // Wir nutzen start_x für Beginn UND Ende (+6), damit die Box immer 6px groß ist
+    oledc_rectangle((uint8)start_x, (uint8)start_y, (uint8)(start_x+6), (uint8)(start_y+6), color);
 }
 
 void core2_main (void)
@@ -65,14 +81,11 @@ void core2_main (void)
     c6dofimu14_axis_t display_data = {0};
     uint32 last_update = 0;
 
-    int rec_w = 6;
-    int rec_h = 6;
-
     while (1)
     {
-        draw_rectangle(&display_data, OLEDC_COLOR_BLACK);
+        draw_bubble(&display_data, OLEDC_COLOR_BLACK);
 
-        // 1. READ from Core 0
+        //Read from Core 0
         if (IfxCpu_acquireMutex(&g_SharedMem_C0_to_C2.mutex))
         {
             // Only update if count changed
@@ -83,19 +96,16 @@ void core2_main (void)
             IfxCpu_releaseMutex(&g_SharedMem_C0_to_C2.mutex);
         }
 
-        // 2. UPDATE SCREEN
-
+        //Update Screen
         oledc_hud();
 
-        // TODO: Calculate Position
-
-        // Draw Bubble
+        //Draw Bubble
         if(display_data.x > 43 && display_data.x < 53
                 && display_data.y > 43 && display_data.y < 53){
-            draw_rectangle(&display_data, OLEDC_COLOR_GREEN);
+            draw_bubble(&display_data, OLEDC_COLOR_GREEN);
         }
         else{
-            draw_rectangle(&display_data, OLEDC_COLOR_RED);
+            draw_bubble(&display_data, OLEDC_COLOR_RED);
         }
 
         IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 10));
