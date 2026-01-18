@@ -193,7 +193,15 @@ void delay_ms(uint32 ms) {
     IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, ms));
 }
 
-// --- Helper: Send Command/Data ---
+/**
+ * @brief OLED C command
+ *
+ * @param[in] command         hex command
+ * @param[in] args            pointer to command
+ * @param[in] args_len        length of command
+ *
+ * This is how you communicate with the SSD1351. Sends commands via SPI
+ */
 void oledc_command(uint8 cmd, uint8 *args, uint16 args_len) {
     // 1. Send Command Byte
     //IfxPort_setPinLow(OLED_CS);
@@ -214,6 +222,11 @@ void oledc_command(uint8 cmd, uint8 *args, uint16 args_len) {
     //IfxPort_setPinHigh(OLED_CS);
 }
 
+/**
+ * @brief OLED C reset
+ *
+ * Reset sequence as specified by datasheet
+ */
 void oledc_reset(void) {
     IfxPort_setPinHigh(OLED_RST);
     IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 1));
@@ -224,12 +237,22 @@ void oledc_reset(void) {
 }
 
 // --- Initialization ---
+/**
+ * @brief OLED C gpio init
+ *
+ * Init the oled c gpio pins
+ */
 void init_OLED_GPIO(void) {
     IfxPort_setPinModeOutput(OLED_RST, IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
     IfxPort_setPinModeOutput(OLED_DC,  IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
     IfxPort_setPinHigh(OLED_RST);
 }
 
+/**
+ * @brief QSPI1 init
+ *
+ * Init the QSPI1 module
+ */
 void init_QSPI1_Module(void) {
     IfxQspi_SpiMaster_Config spiMasterConfig;
     IfxQspi_SpiMaster_initModuleConfig(&spiMasterConfig, &MODULE_QSPI1);
@@ -272,7 +295,11 @@ void oledc_enable(uint8 state){
     IfxPort_setPinHigh(OLED_DC);
 }
 
-// --- OLED C INIT SEQUENCE ---
+/**
+ * @brief OLED C init
+ *
+ * OLED C command init sequence
+ */
 void oledc_init(void) {
 
     oledc_reset();
@@ -317,10 +344,16 @@ void oledc_init(void) {
     */
 }
 
-// --- Drawing Functions ---
-
-// Setup the RAM window for writing
-// --- DRAWING LOGIC ---
+/**
+ * @brief OLED C set window
+ *
+ * @param[in] start_col     start column coordinate
+ * @param[in] start_row     start row coordinate
+ * @param[in] end_col       end column cordinate
+ * @param[in] end_row       end row coordinate
+ *
+ * Set drawable window for oled c coordinates in ram
+ */
 static void set_window(uint8 start_col, uint8 start_row, uint8 end_col, uint8 end_row) {
     uint8 cols[2] = {_OLEDC_COL_OFF + start_col, _OLEDC_COL_OFF + end_col};
     uint8 rows[2] = {_OLEDC_ROW_OFF + start_row, _OLEDC_ROW_OFF + end_row};
@@ -335,6 +368,17 @@ static void set_window(uint8 start_col, uint8 start_row, uint8 end_col, uint8 en
     IfxPort_setPinHigh(OLED_DC);
 }
 
+/**
+ * @brief OLED C rectangle
+ *
+ * @param[in] start_col     start column coordinate
+ * @param[in] start_row     start row coordinate
+ * @param[in] end_col       end column cordinate
+ * @param[in] end_row       end row coordinate
+ * @param[in] color         color of rectangle
+ *
+ * Draw a filled rectangle from start coordiantes to end coordinates
+ */
 void oledc_rectangle(uint8 start_col, uint8 start_row, uint8 end_col, uint8 end_row, uint16 color) {
     if (end_col >= _OLEDC_SCREEN_WIDTH) end_col = _OLEDC_SCREEN_WIDTH - 1;
     if (end_row >= _OLEDC_SCREEN_HEIGHT) end_row = _OLEDC_SCREEN_HEIGHT - 1;
@@ -350,10 +394,28 @@ void oledc_rectangle(uint8 start_col, uint8 start_row, uint8 end_col, uint8 end_
     }
 }
 
+/**
+ * @brief OLED C fill screen
+ *
+ * @param[in] color     color choice
+ *
+ * Fill screen with specified color
+ */
 void oledc_fill_screen(uint16 color) {
     oledc_rectangle(0, 0, 95, 95, color);
 }
 
+/**
+ * @brief OLED C line
+ *
+ * @param[in] start_col     start column coordinate
+ * @param[in] start_row     start row coordinate
+ * @param[in] end_col       end column cordinate
+ * @param[in] end_row       end row coordinate
+ * @param[in] color         color of line
+ *
+ * Draw a line from specified coordinates to other coordinates with specified color
+ */
 void oledc_line(uint8 x1, uint8 y1, uint8 x2, uint8 y2, uint16 color) {
     if (x1 == x2) {
         if (y1 > y2) { uint8 t = y1; y1 = y2; y2 = t; }
@@ -364,6 +426,11 @@ void oledc_line(uint8 x1, uint8 y1, uint8 x2, uint8 y2, uint16 color) {
     }
 }
 
+/**
+ * @brief OLED C hud
+ *
+ * Draw green crosshair
+ */
 void oledc_hud(void) {
     // Draw Green Crosshairs (Center is 48,48)
     oledc_line(48, 0, 48, 95, OLEDC_COLOR_WHITE);

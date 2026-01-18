@@ -51,10 +51,37 @@ static IfxI2c_I2c_Device i2cDev;
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
+
+/**
+ * @brief Maps a given integer from one range to another.
+ *
+ * This function linearly maps a given integer x from the range
+ * in_min and in_max to the range out_min and out_max.
+
+ *
+ * @param x The input value to be mapped.
+ * @param in_min The lower bound of the input range.
+ * @param in_max The upper bound of the input range.
+ * @param out_min The lower bound of the output range.
+ * @param out_max The upper bound of the output range.
+ *
+ * @return The mapped value in the range out_min and out_max.
+ */
 static sint16 map(sint16 x, sint16 in_min, sint16 in_max, sint16 out_min, sint16 out_max) {
       return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
     }
 
+/**
+ * @brief Writes a single byte of data to a specific register on the I2C device.
+ *
+ * This helper function encapsulates the buffer setup required for the iLLD I2C write.
+ *
+ * @param device Pointer to the I2C device handle.
+ * @param reg_addr The 8-bit register address to write to.
+ * @param value The 8-bit data value to write to the register.
+ *
+ * @return IfxI2c_I2c_Status_ok if the transmission was successful, otherwise an error status.
+ */
 IfxI2c_I2c_Status write_register(IfxI2c_I2c_Device *device, uint8 reg_addr, uint8 value) {
     uint8 tx_buf[2];
     tx_buf[0] = reg_addr; // First byte is the register address
@@ -64,6 +91,11 @@ IfxI2c_I2c_Status write_register(IfxI2c_I2c_Device *device, uint8 reg_addr, uint
     return IfxI2c_I2c_write(device, tx_buf, 2);
 }
 
+/**
+ * @brief IMU init sequence
+ *
+ * Init sequence for the IMU click
+ */
 IfxI2c_I2c_Status c6dofimu14_init(void){
     /* create config structure */
        IfxI2c_I2c_Config config;
@@ -156,7 +188,18 @@ IfxI2c_I2c_Status c6dofimu14_init(void){
 }
 
 
-
+/**
+ * @brief Checks if new data is ready from the 6-DOF IMU sensor.
+ *
+ * This function checks the C6DOFIMU14_REG0_INT_STATUS_1 register of the
+ * 6-DOF IMU sensor to determine if new data is ready. It reads the status
+ * using I2C communication and delays between each check. If the data is
+ * ready within a specified timeout period, the function returns
+ * a success code. If the timeout period is exceeded the function returns
+ * an error code.
+ *
+ * @return C6DOFIMU14_OK if new data is ready, otherwise C6DOFIMU14_ERR if a timeout occurs.
+ */
 static uint8 c6dofimu14_check_data_ready() {
     uint8 tmp_data;
     uint16 timeout_cnt = 0;
@@ -184,6 +227,15 @@ static uint8 c6dofimu14_check_data_ready() {
     return C6DOFIMU14_ERR;
 }
 
+/**
+ * @brief Reads the Accelerometer axis data and maps it to display coordinates.
+ *
+ * This function performs a burst read of 6 bytes starting from `ACCEL_X_MSB`.
+ * It reconstructs the 16-bit signed raw values for X, Y, and Z axes and then
+ * maps these values from the sensor's range to the OLED display's coordinate system.
+ *
+ * @param axis Pointer to a `c6dofimu14_axis_t` structure where the mapped coordinates will be stored.
+ */
 void c6dofimu14_read_accel_axis(c6dofimu14_axis_t *axis) {
     uint8 reg_addr = C6DOFIMU14_REG0_ACCEL_X_MSB; // Starting register
     uint8 data_buf[6]; // Buffer to hold X_MSB, X_LSB, Y_MSB, Y_LSB, Z_MSB, Z_LSB

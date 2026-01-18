@@ -713,7 +713,22 @@
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
 
+/**
+ * @brief IMU init sequence
+ *
+ * Init sequence for the IMU click
+ */
 IfxI2c_I2c_Status c6dofimu14_init();
+
+/**
+ * @brief Reads the Accelerometer axis data and maps it to display coordinates.
+ *
+ * This function performs a burst read of 6 bytes starting from `ACCEL_X_MSB`.
+ * It reconstructs the 16-bit signed raw values for X, Y, and Z axes and then
+ * maps these values from the sensor's range to the OLED display's coordinate system.
+ *
+ * @param axis Pointer to a `c6dofimu14_axis_t` structure where the mapped coordinates will be stored.
+ */
 void c6dofimu14_read_accel_axis(c6dofimu14_axis_t *axis);
 
 
