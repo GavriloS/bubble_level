@@ -51,17 +51,24 @@
 /*********************************************************************************************************************/
 #include "tc275_shared_IPC.h"
 
-// ACTUAL MEMORY ALLOCATION
-// These sit in global memory accessible by all cores.
-
-// 1. Shared Memory between Core 1 (Producer) and Core 0 (Broker)
+/**
+ * @brief Shared memory from Core 1 to Core 0.
+ *
+ * Used by Core 1 as the producer and Core 0 as the broker.
+ * Contains IMU data protected by a mutex for safe concurrent access.
+ */
 volatile Shared_Memory_Block_t g_SharedMem_C1_to_C0 = {
     .data = {0.0f, 0.0f},
     .mutex = 0,
     .update_count = 0
 };
 
-// 2. Shared Memory between Core 0 (Broker) and Core 2 (Consumer)
+/**
+ * @brief Shared memory from Core 0 to Core 2.
+ *
+ * Used by Core 0 as the broker and Core 2 as the consumer.
+ * Contains IMU data protected by a mutex for safe concurrent access.
+ */
 volatile Shared_Memory_Block_t g_SharedMem_C0_to_C2 = {
     .data = {0.0f, 0.0f},
     .mutex = 0,

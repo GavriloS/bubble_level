@@ -80,7 +80,6 @@
 */
 static const uint8  _OLEDC_SCREEN_WIDTH    = 0x60;
 static const uint8  _OLEDC_SCREEN_HEIGHT   = 0x60;
-static const uint8 _OLEDC_SCREEN_SIZE     = 0x2400;
 
 
 /*
@@ -96,35 +95,22 @@ static const uint8 _OLEDC_SCREEN_SIZE     = 0x2400;
 static const uint8  _OLEDC_SET_COL_ADDRESS   = 0x15;
 static const uint8  _OLEDC_SET_ROW_ADDRESS   = 0x75;
 static const uint8  _OLEDC_WRITE_RAM         = 0x5C;
-static const uint8  _OLEDC_READ_RAM          = 0x5D;
 static const uint8  _OLEDC_SET_REMAP         = 0xA0;
 static const uint8  _OLEDC_SET_START_LINE    = 0xA1;
 static const uint8  _OLEDC_SET_OFFSET        = 0xA2;
-static const uint8  _OLEDC_MODE_OFF          = 0xA4;
-static const uint8  _OLEDC_MODE_ON           = 0xA5;
 static const uint8  _OLEDC_MODE_NORMAL       = 0xA6;
-static const uint8  _OLEDC_MODE_INVERSE      = 0xA7;
-static const uint8  _OLEDC_FUNCTION          = 0xAB;
 static const uint8  _OLEDC_SLEEP_ON          = 0xAE;
 static const uint8  _OLEDC_SLEEP_OFF         = 0xAF;
-static const uint8  _OLEDC_NOP              = 0xB0;
 static const uint8  _OLEDC_SET_RESET_PRECH  = 0xB1;
-static const uint8  _OLEDC_ENHANCEMENT      = 0xB2;
 static const uint8  _OLEDC_CLOCK_DIV         = 0xB3;
 static const uint8  _OLEDC_VSL               = 0xB4;
-static const uint8  _OLEDC_GPIO              = 0xB5;
+
 static const uint8  _OLEDC_SETSEC_PRECH      = 0xB6;
-static const uint8  _OLEDC_GREY_SCALE        = 0xB8;
-static const uint8  _OLEDC_LUT               = 0xB9;
-static const uint8  _OLEDC_PRECH_VOL         = 0xBB;
 static const uint8  _OLEDC_VCOMH             = 0xBE;
 static const uint8  _OLEDC_CONTRAST          = 0xC1;
 static const uint8  _OLEDC_MASTER_CONTRAST   = 0xC7;
 static const uint8  _OLEDC_MUX_RATIO         = 0xCA;
 static const uint8  _OLEDC_COMMAND_LOCK      = 0xFD;
-static const uint8  _OLEDC_SCROLL_HOR        = 0x96;
-static const uint8  _OLEDC_START_MOV         = 0x9E;
-static const uint8  _OLEDC_STOP_MOV          = 0x9F;
 
 /**
  * @brief Default SSD1351 configuration values (written during initialization).
@@ -141,8 +127,6 @@ static uint8 _OLEDC_DEFAULT_VCOMH          = 0x05;
 static uint8 _OLEDC_DEFAULT_MASTER_CONT    = 0xCF;
 static uint8 _OLEDC_DEFAULT_PRECHARGE_2    = 0x01;
 
-static uint8 cols[ 2 ]    = { _OLEDC_COL_OFF, _OLEDC_COL_OFF + 95 };          
-static uint8 rows[ 2 ]    = { _OLEDC_ROW_OFF, _OLEDC_ROW_OFF + 95 };
 
 static uint8 _OLEDC_DEFAULT_REMAP = _OLEDC_RMP_INC_HOR | _OLEDC_RMP_COLOR_REV |
                                 _OLEDC_RMP_SEQ_RGB | _OLEDC_RMP_SCAN_REV |
@@ -151,8 +135,6 @@ static uint8 _OLEDC_DEFAULT_REMAP = _OLEDC_RMP_INC_HOR | _OLEDC_RMP_COLOR_REV |
 static  uint8 _OLEDC_DEFAULT_VSL[ 3 ]       = { 0xA0, 0xB5, 0x55 };
 static  uint8 _OLEDC_DEFAULT_CONTRAST[ 3 ]  = { 0x8A, 0x51, 0x8A };
 
-static uint16         x_cord;
-static uint16         y_cord;
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
@@ -238,8 +220,9 @@ void delay_ms(uint32 ms) {
  * High-level initialization function that:
  * 1. Configures QSPI hardware and pins.
  * 2. Configures GPIO for Reset and Data/Command control.
- * 3. Performs a hardware reset of the display.
- * 4. Sends the SSD1351 startup command sequence.
+ * 3. Enables the display
+ * 4. Performs a hardware reset of the display.
+ * 5. Sends the SSD1351 startup command sequence.
  */
 void oledc_init(void) {
     /* Configure QSPI1 as SPI master for SSD1351. */
@@ -248,6 +231,9 @@ void oledc_init(void) {
     /* Configure RST/DC GPIOs. */
     init_OLED_GPIO();
 
+    /* Enable SSD1351 controller. */
+    oledc_enable(HIGH);
+    
     /* Reset SSD1351 controller. */
     oledc_reset();
 
@@ -376,7 +362,11 @@ static void set_window(uint8 start_col, uint8 start_row, uint8 end_col, uint8 en
  * Set the enable pin high or low, aka on or off
  */
 static void oledc_enable(uint8 state){
-    IfxPort_setPinHigh(OLED_DC);
+    if (state == HIGH){
+        IfxPort_setPinHigh(OLED_DC);
+    } else {
+        IfxPort_setPinLow(OLED_DC);
+    }
 }
 
 /**

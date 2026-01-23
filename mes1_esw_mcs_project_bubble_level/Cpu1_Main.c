@@ -43,11 +43,6 @@ extern IfxCpu_syncEvent cpuSyncEvent;
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
 
-// Dummy sensor values for testing
-sint16 sim_x = 0;
-sint16 sim_y = 0;
-sint16 sim_z = 0;
-
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
@@ -55,6 +50,14 @@ sint16 sim_z = 0;
 /*********************************************************************************************************************/
 /*-------------------------------------------------------Main--------------------------------------------------------*/
 /*********************************************************************************************************************/
+
+/**
+ * @brief Core 1 main function.
+ *
+ * Acts as the *producer*.
+ * Initializes the 6-DOF IMU and periodically reads the accelerometer axes.
+ * Each new sample is written to the shared memory block `g_SharedMem_C1_to_C0` under mutex protection.
+ */
 void core1_main (void)
 {
     IfxCpu_enableInterrupts();
@@ -65,7 +68,6 @@ void core1_main (void)
     IfxScuWdt_disableCpuWatchdog (IfxScuWdt_getCpuWatchdogPassword ());
 
     /* Cpu sync event wait*/
-    //IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
 
@@ -85,7 +87,6 @@ void core1_main (void)
             // Critical Section
             g_SharedMem_C1_to_C0.data.x = axis.x;
             g_SharedMem_C1_to_C0.data.y = axis.y;
-            //g_SharedMem_C1_to_C0.data.z = sim_z;
             g_SharedMem_C1_to_C0.update_count++;
 
             // Release lock

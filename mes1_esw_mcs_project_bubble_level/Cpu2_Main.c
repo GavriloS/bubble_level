@@ -36,7 +36,6 @@
 #include "tc275_uart_app.h"
 #include "tc275_shared_IPC.h"
 #include <stdio.h>
-
 #include "tc275_common_structs.h"
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -60,22 +59,23 @@ extern IfxCpu_syncEvent cpuSyncEvent;
  * Draw the bubble/rectange with coordinates received from IMU onto OLED C
  */
 void draw_bubble(c6dofimu14_axis_t *data, uint16 color){
-    // 1. Offset berechnen (-2 Pixel)
-    // WICHTIG: In 'int' umwandeln, damit wir negative Zahlen prüfen können!
+    // 1. Calculate offset (-3 pixels)
+    // IMPORTANT: Cast to 'int' so negative values can be checked.
     int start_x = (int)data->x - 3;
     int start_y = (int)data->y - 3;
 
-    // 2. Sicherheits-Check (Clamping)
-    // Wenn durch den Offset eine negative Zahl entsteht, setzen wir sie auf 0.
+    // 2. Safety check (clamping)
+    // If the offset results in a negative value, clamp it to 0.
     if (start_x < 0) start_x = 0;
     if (start_y < 0) start_y = 0;
 
-    // Sicherheit nach oben/rechts (damit wir nicht über 95 malen)
+    // Upper/right boundary check
+    // Prevent drawing beyond pixel 95.
     if (start_x > 89) start_x = 89; // 95 - 6 Pixel Größe
     if (start_y > 89) start_y = 89;
 
-    // 3. Zeichnen
-    // Wir nutzen start_x für Beginn UND Ende (+6), damit die Box immer 6px groß ist
+    // 3. Draw
+    // Use start_x/start_y for both start and end (+6) so the box is always 6 px.
     oledc_rectangle((uint8)start_x, (uint8)start_y, (uint8)(start_x+6), (uint8)(start_y+6), color);
 }
 
@@ -83,6 +83,13 @@ void draw_bubble(c6dofimu14_axis_t *data, uint16 color){
 /*-------------------------------------------------------Main--------------------------------------------------------*/
 /*********************************************************************************************************************/
 
+/**
+ * @brief Core 2 main function.
+ *
+ * Acts as the *consumer*.
+ * Initializes the MikroE OLED C Click display and renders a "bubble" indicator.
+ * Reads the latest sample from `g_SharedMem_C0_to_C2` (only when `update_count` changes) and updates the HUD/bubble color accordingly.
+ */
 void core2_main (void)
 {
     IfxCpu_enableInterrupts();
@@ -93,28 +100,11 @@ void core2_main (void)
     IfxScuWdt_disableCpuWatchdog (IfxScuWdt_getCpuWatchdogPassword ());
 
     /* Cpu sync event wait*/
-    //IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
-
     
     // Hardware Init
-    // init_QSPI1_Module();
-    // init_OLED_GPIO();
     oledc_init();
     
-    /*
-    //new
-    init_QSPI1_Module();
-    delayMS(50);
-
-    init_OLED_GPIO();
-    delayMS(50);
-
-    // --- OLED INIT (COLOR) ---
-    oledc_init(); // Fixed name!
-    delayMS(50);
-    //new
-    */
     oledc_fill_screen(OLEDC_COLOR_BLACK);
     oledc_hud();
 
@@ -151,5 +141,4 @@ void core2_main (void)
 
         IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 10));
     }
-
 }

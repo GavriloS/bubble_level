@@ -41,7 +41,7 @@ typedef struct {
 /*--------------------------------------------Global Variables (Extern)----------------------------------------------*/
 /*********************************************************************************************************************/
 
-// We need TWO shared memory areas as per the requirements [cite: 15]
+// We need TWO shared memory areas as per the requirements
 
 /**
  * @brief Shared memory from Core 1 to Core 0.

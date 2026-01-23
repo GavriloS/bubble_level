@@ -37,7 +37,7 @@
 #include "string.h"
 #include "tc275_common_structs.h"
 #include "tc275_uart_app.h"
-
+#include <stdio.h>
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
 /*********************************************************************************************************************/
@@ -73,6 +73,15 @@ void delayMS(uint32 ms){
 /*-------------------------------------------------------Main--------------------------------------------------------*/
 /*********************************************************************************************************************/
 
+/**
+ * @brief Core 0 main function.
+ *
+ * Acts as the *broker* between the producer (Core 1) and consumer (Core 2).
+ * Core 0 starts the other cores, initializes UART, then:
+ * - reads accelerometer samples from the shared memory block g_SharedMem_C1_to_C0
+ * - logs the values via UART
+ * - forwards the latest sample to g_SharedMem_C0_to_C2 for display on the OLED
+ */
 void core0_main (void)
 {
     IfxCpu_enableInterrupts();
@@ -112,18 +121,15 @@ void core0_main (void)
                  "X: %d, Y: %d\n",
                  local_buffer.x, local_buffer.y);
         uart_sendMessage((uint8 * )buffer, strlen(buffer));
-        delayMS(20);
+        // delayMS(20);
 
         // Forward to Core 2
-        // Fix: Cast to (IfxCpu_mutexLock*) for the blocking wait
         while (!IfxCpu_acquireMutex((IfxCpu_mutexLock*)&g_SharedMem_C0_to_C2.mutex));
 
         g_SharedMem_C0_to_C2.data = local_buffer;
         g_SharedMem_C0_to_C2.update_count++;
 
         IfxCpu_releaseMutex((IfxCpu_mutexLock*)&g_SharedMem_C0_to_C2.mutex);
-
-
 
         // Run loop at reasonable speed (50Hz)
         delayMS(20);
