@@ -61,43 +61,20 @@
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
-// --- Function Prototypes ---
-/**
- * @brief QSPI1 init
- *
- * Init the QSPI1 module
- */
-void init_QSPI1_Module(void);
-/**
- * @brief OLED C gpio init
- *
- * Init the oled c gpio pins
- */
-void init_OLED_GPIO(void);
+
 /**
  * @brief OLED C init
  *
  * OLED C command init sequence
  */
 void oledc_init(void);
-/**
- * @brief OLED C reset
- *
- * Reset sequence as specified by datasheet
- */
-void oledc_reset(void);
-/**
- * @brief OLED C command
- *
- * @param[in] command         hex command
- * @param[in] args            pointer to command
- * @param[in] args_len        length of command
- *
- * This is how you communicate with the SSD1351. Sends commands via SPI
- */
-void oledc_command(uint8 cmd, uint8 *args, uint16 args_len);
 
-// Drawing Functions
+/*
+*********************************************************************************************************
+*                                             Drawing Functions
+*********************************************************************************************************
+*/
+
 /**
  * @brief OLED C fill screen
  *
@@ -106,6 +83,7 @@ void oledc_command(uint8 cmd, uint8 *args, uint16 args_len);
  * Fill screen with specified color
  */
 void oledc_fill_screen(uint16 color);
+
 /**
  * @brief OLED C rectangle
  *
@@ -118,6 +96,7 @@ void oledc_fill_screen(uint16 color);
  * Draw a filled rectangle from start coordiantes to end coordinates
  */
 void oledc_rectangle(uint8 start_col, uint8 start_row, uint8 end_col, uint8 end_row, uint16 color);
+
 /**
  * @brief OLED C line
  *
@@ -130,6 +109,7 @@ void oledc_rectangle(uint8 start_col, uint8 start_row, uint8 end_col, uint8 end_
  * Draw a line from specified coordinates to other coordinates with specified color
  */
 void oledc_line(uint8 x1, uint8 y1, uint8 x2, uint8 y2, uint16 color);
+
 /**
  * @brief OLED C hud
  *

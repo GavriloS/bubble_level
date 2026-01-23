@@ -96,11 +96,25 @@ void core2_main (void)
     //IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
+    
     // Hardware Init
-    init_QSPI1_Module();
-    init_OLED_GPIO();
+    // init_QSPI1_Module();
+    // init_OLED_GPIO();
     oledc_init();
+    
+    /*
+    //new
+    init_QSPI1_Module();
+    delayMS(50);
 
+    init_OLED_GPIO();
+    delayMS(50);
+
+    // --- OLED INIT (COLOR) ---
+    oledc_init(); // Fixed name!
+    delayMS(50);
+    //new
+    */
     oledc_fill_screen(OLEDC_COLOR_BLACK);
     oledc_hud();
 
@@ -109,17 +123,18 @@ void core2_main (void)
 
     while (1)
     {
+        // clear previous frame
         draw_bubble(&display_data, OLEDC_COLOR_BLACK);
 
         //Read from Core 0
-        if (IfxCpu_acquireMutex(&g_SharedMem_C0_to_C2.mutex))
+        if (IfxCpu_acquireMutex((IfxCpu_mutexLock *)&g_SharedMem_C0_to_C2.mutex))
         {
             // Only update if count changed
             if(g_SharedMem_C0_to_C2.update_count != last_update) {
                 display_data = g_SharedMem_C0_to_C2.data;
                 last_update = g_SharedMem_C0_to_C2.update_count;
             }
-            IfxCpu_releaseMutex(&g_SharedMem_C0_to_C2.mutex);
+            IfxCpu_releaseMutex((IfxCpu_mutexLock *)&g_SharedMem_C0_to_C2.mutex);
         }
 
         //Update Screen

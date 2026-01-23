@@ -33,6 +33,7 @@
 #include "IfxScuWdt.h"
 #include <tc275_shared_IPC.h>
 #include <IfxStm.h>
+#include "tc275_c6dofimu.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -67,7 +68,6 @@ void core1_main (void)
     //IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
-    uint32 local_counter = 0;
 
     c6dofimu14_init();
     c6dofimu14_axis_t axis = {0,0,0};
@@ -80,7 +80,7 @@ void core1_main (void)
 
         // 2. WRITE to Shared Memory (C1 -> C0)
         // Try to acquire the lock
-        if (IfxCpu_acquireMutex(&g_SharedMem_C1_to_C0.mutex))
+        if (IfxCpu_acquireMutex((IfxCpu_mutexLock *)&g_SharedMem_C1_to_C0.mutex))
         {
             // Critical Section
             g_SharedMem_C1_to_C0.data.x = axis.x;
@@ -89,7 +89,7 @@ void core1_main (void)
             g_SharedMem_C1_to_C0.update_count++;
 
             // Release lock
-            IfxCpu_releaseMutex(&g_SharedMem_C1_to_C0.mutex);
+            IfxCpu_releaseMutex((IfxCpu_mutexLock *)&g_SharedMem_C1_to_C0.mutex);
         }
 
         // Wait a bit (simulate 100Hz sensor rate)

@@ -36,6 +36,7 @@
 #include "IfxStm.h"
 #include "string.h"
 #include "tc275_common_structs.h"
+#include "tc275_uart_app.h"
 
 /*********************************************************************************************************************/
 /*------------------------------------------------------Macros-------------------------------------------------------*/
@@ -87,16 +88,6 @@ void core0_main (void)
     IfxCpu_emitEvent(&cpuSyncEvent);
     IfxCpu_waitEvent(&cpuSyncEvent, 1);
 
-    // --- HARDWARE INIT ---
-    init_QSPI1_Module();
-    delayMS(50);
-
-    init_OLED_GPIO();
-    delayMS(50);
-
-    // --- OLED INIT (COLOR) ---
-    oledc_init(); // Fixed name!
-    delayMS(50);
     initUART();
 
     c6dofimu14_axis_t local_buffer;
@@ -107,7 +98,6 @@ void core0_main (void)
         // ---------------------------------------------------------------------
         // STEP 1: READ from Core 1 (Producer)
         // ---------------------------------------------------------------------
-        boolean gotNewData = FALSE;
 
         // Fix: Cast to (IfxCpu_mutexLock*) to satisfy compiler warning
         while(!IfxCpu_acquireMutex((IfxCpu_mutexLock*)&g_SharedMem_C1_to_C0.mutex));
@@ -121,7 +111,7 @@ void core0_main (void)
         snprintf(buffer, sizeof(buffer),
                  "X: %d, Y: %d\n",
                  local_buffer.x, local_buffer.y);
-        uart_sendMessage(buffer, strlen(buffer));
+        uart_sendMessage((uint8 * )buffer, strlen(buffer));
         delayMS(20);
 
         // Forward to Core 2
