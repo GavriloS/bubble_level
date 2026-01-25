@@ -46,21 +46,6 @@
 #define OLED_RST  &MODULE_P10, 4
 #define OLED_DC   &MODULE_P13, 2
 
-/*
-// --- Driver Constants (From your oled.c) ---
-#define _OLEDC_SCREEN_WIDTH     0x96 // 96
-#define _OLEDC_SCREEN_HEIGHT    0x96 // 96
-#define _OLEDC_ROW_OFF          0x00
-#define _OLEDC_COL_OFF          0x10 // Offset is critical for proper centering
-
-// --- Commands ---
-#define _OLEDC_SET_COL_ADDRESS  0x15
-#define _OLEDC_SET_ROW_ADDRESS  0x75
-#define _OLEDC_WRITE_RAM        0x5C
-#define _OLEDC_COMMAND_LOCK     0xFD
-#define _OLEDC_SLEEP_ON         0xAE
-#define _OLEDC_SLEEP_OFF        0xAF
-*/
 
 /*
 *********************************************************************************************************
@@ -85,17 +70,17 @@
 #define _OLEDC_COLOR_262K          0x80
 #define _OLEDC_IMG_HEAD            0x06
 
+#define  _OLEDC_ROW_OFF          0x00
+#define  _OLEDC_COL_OFF          0x10
 
 /*
 *********************************************************************************************************
 *                                             OLED SETTINGS
 *********************************************************************************************************
 */
-const uint8  _OLEDC_SCREEN_WIDTH    = 0x60;
-const uint8  _OLEDC_SCREEN_HEIGHT   = 0x60;
-const uint8 _OLEDC_SCREEN_SIZE     = 0x2400;
-#define  _OLEDC_ROW_OFF          0x00
-#define  _OLEDC_COL_OFF          0x10
+static const uint8  _OLEDC_SCREEN_WIDTH    = 0x60;
+static const uint8  _OLEDC_SCREEN_HEIGHT   = 0x60;
+
 
 /*
 *********************************************************************************************************
@@ -103,39 +88,33 @@ const uint8 _OLEDC_SCREEN_SIZE     = 0x2400;
 *********************************************************************************************************
 */
 
-const uint8  _OLEDC_SET_COL_ADDRESS   = 0x15;
-const uint8  _OLEDC_SET_ROW_ADDRESS   = 0x75;
-const uint8  _OLEDC_WRITE_RAM         = 0x5C;
-const uint8  _OLEDC_READ_RAM          = 0x5D;
-const uint8  _OLEDC_SET_REMAP         = 0xA0;
-const uint8  _OLEDC_SET_START_LINE    = 0xA1;
-const uint8  _OLEDC_SET_OFFSET        = 0xA2;
-const uint8  _OLEDC_MODE_OFF          = 0xA4;
-const uint8  _OLEDC_MODE_ON           = 0xA5;
-const uint8  _OLEDC_MODE_NORMAL       = 0xA6;
-const uint8  _OLEDC_MODE_INVERSE      = 0xA7;
-const uint8  _OLEDC_FUNCTION          = 0xAB;
-const uint8  _OLEDC_SLEEP_ON          = 0xAE;
-const uint8  _OLEDC_SLEEP_OFF         = 0xAF;
-const uint8  _OLEDC_NOP              = 0xB0;
-const uint8  _OLEDC_SET_RESET_PRECH  = 0xB1;
-const uint8  _OLEDC_ENHANCEMENT      = 0xB2;
-const uint8  _OLEDC_CLOCK_DIV         = 0xB3;
-const uint8  _OLEDC_VSL               = 0xB4;
-const uint8  _OLEDC_GPIO              = 0xB5;
-const uint8  _OLEDC_SETSEC_PRECH      = 0xB6;
-const uint8  _OLEDC_GREY_SCALE        = 0xB8;
-const uint8  _OLEDC_LUT               = 0xB9;
-const uint8  _OLEDC_PRECH_VOL         = 0xBB;
-const uint8  _OLEDC_VCOMH             = 0xBE;
-const uint8  _OLEDC_CONTRAST          = 0xC1;
-const uint8  _OLEDC_MASTER_CONTRAST   = 0xC7;
-const uint8  _OLEDC_MUX_RATIO         = 0xCA;
-const uint8  _OLEDC_COMMAND_LOCK      = 0xFD;
-const uint8  _OLEDC_SCROLL_HOR        = 0x96;
-const uint8  _OLEDC_START_MOV         = 0x9E;
-const uint8  _OLEDC_STOP_MOV          = 0x9F;
+/**
+ * @name SSD1351 command bytes
+ * @brief SSD1351 controller command opcodes used by the OLED C Click.
+ */
+static const uint8  _OLEDC_SET_COL_ADDRESS   = 0x15;
+static const uint8  _OLEDC_SET_ROW_ADDRESS   = 0x75;
+static const uint8  _OLEDC_WRITE_RAM         = 0x5C;
+static const uint8  _OLEDC_SET_REMAP         = 0xA0;
+static const uint8  _OLEDC_SET_START_LINE    = 0xA1;
+static const uint8  _OLEDC_SET_OFFSET        = 0xA2;
+static const uint8  _OLEDC_MODE_NORMAL       = 0xA6;
+static const uint8  _OLEDC_SLEEP_ON          = 0xAE;
+static const uint8  _OLEDC_SLEEP_OFF         = 0xAF;
+static const uint8  _OLEDC_SET_RESET_PRECH  = 0xB1;
+static const uint8  _OLEDC_CLOCK_DIV         = 0xB3;
+static const uint8  _OLEDC_VSL               = 0xB4;
 
+static const uint8  _OLEDC_SETSEC_PRECH      = 0xB6;
+static const uint8  _OLEDC_VCOMH             = 0xBE;
+static const uint8  _OLEDC_CONTRAST          = 0xC1;
+static const uint8  _OLEDC_MASTER_CONTRAST   = 0xC7;
+static const uint8  _OLEDC_MUX_RATIO         = 0xCA;
+static const uint8  _OLEDC_COMMAND_LOCK      = 0xFD;
+
+/**
+ * @brief Default SSD1351 configuration values (written during initialization).
+ */
 static uint8 _OLEDC_DEFAULT_MUX_RATIO      = 95;
 static uint8 _OLEDC_DEFAULT_START_LINE     = 0x80;
 static uint8 _OLEDC_DEFAULT_OFFSET         = 0x20;
@@ -148,8 +127,6 @@ static uint8 _OLEDC_DEFAULT_VCOMH          = 0x05;
 static uint8 _OLEDC_DEFAULT_MASTER_CONT    = 0xCF;
 static uint8 _OLEDC_DEFAULT_PRECHARGE_2    = 0x01;
 
-static uint8 cols[ 2 ]    = { _OLEDC_COL_OFF, _OLEDC_COL_OFF + 95 };          
-static uint8 rows[ 2 ]    = { _OLEDC_ROW_OFF, _OLEDC_ROW_OFF + 95 };
 
 static uint8 _OLEDC_DEFAULT_REMAP = _OLEDC_RMP_INC_HOR | _OLEDC_RMP_COLOR_REV |
                                 _OLEDC_RMP_SEQ_RGB | _OLEDC_RMP_SCAN_REV |
@@ -158,214 +135,110 @@ static uint8 _OLEDC_DEFAULT_REMAP = _OLEDC_RMP_INC_HOR | _OLEDC_RMP_COLOR_REV |
 static  uint8 _OLEDC_DEFAULT_VSL[ 3 ]       = { 0xA0, 0xB5, 0x55 };
 static  uint8 _OLEDC_DEFAULT_CONTRAST[ 3 ]  = { 0x8A, 0x51, 0x8A };
 
-static const uint8*   _font;
-static uint16         _font_color;
-static uint16          _font_orientation;
-static uint16         _font_first_char;
-static uint16         _font_last_char;
-static uint16         _font_height;
-static uint16         x_cord;
-static uint16         y_cord;
 
 /*********************************************************************************************************************/
 /*-------------------------------------------------Global variables--------------------------------------------------*/
 /*********************************************************************************************************************/
+/**
+ * @brief QSPI1 module instance (non-static for potential external access).
+ *
+ * Used to drive the SSD1351 OLED controller via the iLLD SPI master API.
+ */
 IfxQspi_SpiMaster g_qspi2_handle; // Global handle for the module
-static IfxQspi_SpiMaster g_qspi;
-static IfxQspi_SpiMaster_Channel g_qspiChannel;
+
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/
 /*********************************************************************************************************************/
+/**
+ * @brief QSPI1 SPI master driver state for this module.
+ */
+static IfxQspi_SpiMaster g_qspi;
+
+/**
+ * @brief QSPI1 channel configuration/handle for the OLED device (chip-select, baudrate, mode).
+ */
+static IfxQspi_SpiMaster_Channel g_qspiChannel;
 
 /*********************************************************************************************************************/
 /*------------------------------------------------Function Prototypes------------------------------------------------*/
 /*********************************************************************************************************************/
+static void oledc_command(uint8 cmd, uint8 *args, uint16 args_len);
+static void oledc_reset(void);
+static void oledc_enable(uint8 state);
+static void set_window(uint8 start_col, uint8 start_row, uint8 end_col, uint8 end_row);
+static void init_OLED_GPIO(void);
+static void init_QSPI1_Module(void);
+static void init_set_driver_configuration(void);
 
 /*********************************************************************************************************************/
 /*---------------------------------------------Function Implementations----------------------------------------------*/
 /*********************************************************************************************************************/
+
+/**
+ * @brief QSPI1 transmit interrupt service routine.
+ *
+ * Handles transmit events for QSPI1 by delegating to the
+ * Infineon SPI master transmit ISR handler.
+ */
 IFX_INTERRUPT(qspi1TxISR, 0, IFX_INTPRIO_QSPI1_TX) { IfxQspi_SpiMaster_isrTransmit(&g_qspi); }
+
+/**
+ * @brief QSPI1 receive interrupt service routine.
+ *
+ * Handles receive events for QSPI1 by delegating to the
+ * Infineon SPI master receive ISR handler.
+ */
 IFX_INTERRUPT(qspi1RxISR, 0, IFX_INTPRIO_QSPI1_RX) { IfxQspi_SpiMaster_isrReceive(&g_qspi); }
+
+/**
+ * @brief QSPI1 error interrupt service routine.
+ *
+ * Handles error conditions for QSPI1 by delegating to the
+ * Infineon SPI master error ISR handler.
+ */
 IFX_INTERRUPT(qspi1ErISR, 0, IFX_INTPRIO_QSPI1_ER) { IfxQspi_SpiMaster_isrError(&g_qspi); }
 
+/*
 // --- Helper: Delay ---
 void delay_ms(uint32 ms) {
     IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, ms));
 }
+*/
 
-/**
- * @brief OLED C command
- *
- * @param[in] command         hex command
- * @param[in] args            pointer to command
- * @param[in] args_len        length of command
- *
- * This is how you communicate with the SSD1351. Sends commands via SPI
- */
-void oledc_command(uint8 cmd, uint8 *args, uint16 args_len) {
-    // 1. Send Command Byte
-    //IfxPort_setPinLow(OLED_CS);
-    IfxPort_setPinLow(OLED_DC); // DC Low = Command
 
-    IfxQspi_SpiMaster_exchange(&g_qspiChannel, &cmd, NULL_PTR, 1);
-    while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
+// ################
+// global functions
+// ################
 
-    IfxPort_setPinHigh(OLED_DC); // DC Low = Command
-
-    // 2. Send Arguments (if any)
-    if (args_len > 0 && args != NULL_PTR) {
-        // IfxPort_setPinHigh(OLED_DC); // DC High = Data (Args are data)
-        IfxQspi_SpiMaster_exchange(&g_qspiChannel, args, NULL_PTR, args_len);
-        while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
-    }
-
-    //IfxPort_setPinHigh(OLED_CS);
-}
-
-/**
- * @brief OLED C reset
- *
- * Reset sequence as specified by datasheet
- */
-void oledc_reset(void) {
-    IfxPort_setPinHigh(OLED_RST);
-    IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 1));
-    IfxPort_setPinLow(OLED_RST);
-    IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 1));
-    IfxPort_setPinHigh(OLED_RST);
-    IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 100));
-}
 
 // --- Initialization ---
-/**
- * @brief OLED C gpio init
- *
- * Init the oled c gpio pins
- */
-void init_OLED_GPIO(void) {
-    IfxPort_setPinModeOutput(OLED_RST, IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
-    IfxPort_setPinModeOutput(OLED_DC,  IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
-    IfxPort_setPinHigh(OLED_RST);
-}
+
 
 /**
- * @brief QSPI1 init
+ * @brief Initialize OLED C Click (SSD1351) interface.
  *
- * Init the QSPI1 module
- */
-void init_QSPI1_Module(void) {
-    IfxQspi_SpiMaster_Config spiMasterConfig;
-    IfxQspi_SpiMaster_initModuleConfig(&spiMasterConfig, &MODULE_QSPI1);
-
-    spiMasterConfig.mode             = IfxQspi_Mode_master;
-    spiMasterConfig.maximumBaudrate  = 20000000; // 20 MHz
-    spiMasterConfig.txPriority       = 10; // Ensure ISRs are installed in main!
-    spiMasterConfig.rxPriority       = 11;
-    spiMasterConfig.erPriority       = 12;
-    spiMasterConfig.isrProvider      = IfxCpu_Irq_getTos(IfxCpu_getCoreIndex());
-
-    const IfxQspi_SpiMaster_Pins pins = {
-        .sclk = &IfxQspi1_SCLK_P10_2_OUT, .sclkMode = IfxPort_OutputMode_pushPull,
-        .mtsr = &IfxQspi1_MTSR_P10_3_OUT, .mtsrMode = IfxPort_OutputMode_pushPull,
-        .mrst = &IfxQspi1_MRSTA_P10_1_IN, .mrstMode = IfxPort_InputMode_pullUp,
-        .pinDriver = IfxPort_PadDriver_cmosAutomotiveSpeed1
-    };
-    spiMasterConfig.pins = &pins;
-    IfxQspi_SpiMaster_initModule(&g_qspi, &spiMasterConfig);
-
-    IfxQspi_SpiMaster_ChannelConfig channelConfig;
-    IfxQspi_SpiMaster_initChannelConfig(&channelConfig, &g_qspi);
-    channelConfig.ch.baudrate = 10000000; // 10 MHz
-    channelConfig.sls.output.pin    = &IfxQspi1_SLSO9_P10_5_OUT;
-    channelConfig.sls.output.mode   = IfxPort_OutputMode_pushPull;
-    channelConfig.sls.output.driver = IfxPort_PadDriver_cmosAutomotiveSpeed1;
-    channelConfig.ch.mode.dataHeading = IfxQspi_DataHeading_msbFirst; // Standard SPI
-
-    IfxQspi_SpiMaster_initChannel(&g_qspiChannel, &channelConfig);
-}
-
-/**
- * @brief OLED C enable
- *
- * @param[in] state (1 = on, 0 = off)
- *
- * Set the enable pin high or low, aka on or off
- */
-void oledc_enable(uint8 state){
-    IfxPort_setPinHigh(OLED_DC);
-}
-
-/**
- * @brief OLED C init
- *
- * OLED C command init sequence
+ * High-level initialization function that:
+ * 1. Configures QSPI hardware and pins.
+ * 2. Configures GPIO for Reset and Data/Command control.
+ * 3. Enables the display
+ * 4. Performs a hardware reset of the display.
+ * 5. Sends the SSD1351 startup command sequence.
  */
 void oledc_init(void) {
+    /* Configure QSPI1 as SPI master for SSD1351. */
+    init_QSPI1_Module();
 
-    oledc_reset();
-    
-    oledc_command( _OLEDC_COMMAND_LOCK,    &_OLEDC_DEFAULT_OLED_LOCK,     1 );
-    oledc_command( _OLEDC_COMMAND_LOCK,    &_OLEDC_DEFAULT_CMD_LOCK,      1 );
-    oledc_command( _OLEDC_SLEEP_ON,        0,                      0 );
-    
-    oledc_command( _OLEDC_SET_REMAP,       &_OLEDC_DEFAULT_REMAP,         1 );
-    oledc_command( _OLEDC_MUX_RATIO,       &_OLEDC_DEFAULT_MUX_RATIO,     1 );
-    oledc_command( _OLEDC_SET_START_LINE,  &_OLEDC_DEFAULT_START_LINE,    1 );
-    oledc_command( _OLEDC_SET_OFFSET,      &_OLEDC_DEFAULT_OFFSET,        1 );
-    oledc_command( _OLEDC_VCOMH,           &_OLEDC_DEFAULT_VCOMH,         1 );
-    oledc_command( _OLEDC_CLOCK_DIV,       &_OLEDC_DEFAULT_DIVSET,        1 );
-    oledc_command( _OLEDC_SET_RESET_PRECH, &_OLEDC_DEFAULT_PRECHARGE,     1 );
-    oledc_command( _OLEDC_SETSEC_PRECH,    &_OLEDC_DEFAULT_PRECHARGE_2,   1 );
-    oledc_command( _OLEDC_MASTER_CONTRAST, &_OLEDC_DEFAULT_MASTER_CONT,   1 );
-    oledc_command( _OLEDC_CONTRAST,        _OLEDC_DEFAULT_CONTRAST,       3 );
-    oledc_command( _OLEDC_VSL,             _OLEDC_DEFAULT_VSL,            3 );
+    /* Configure RST/DC GPIOs. */
+    init_OLED_GPIO();
 
-    oledc_command(_OLEDC_MODE_NORMAL, 0, 0);
+    /* Enable SSD1351 controller. */
+    oledc_enable(HIGH);
     
-    oledc_command(_OLEDC_SLEEP_OFF, 0, 0);
-    
-    /* old stuff*/
-    /*
-    //oledc_enable(HIGH);
+    /* Reset SSD1351 controller. */
     oledc_reset();
 
-    uint8 val_lock_1 = 0x12; oledc_command(_OLEDC_COMMAND_LOCK, &val_lock_1, 1);
-    uint8 val_lock_2 = 0xB1; oledc_command(_OLEDC_COMMAND_LOCK, &val_lock_2, 1);
-    oledc_command(_OLEDC_SLEEP_ON, NULL_PTR, 0);
-
-    uint8 val_remap = 0x74;
-    oledc_command(0xA0, &val_remap, 1);
-    uint8 val_mux   = 95;    oledc_command(0xCA, &val_mux, 1);
-    uint8 val_start = 0x00;  oledc_command(0xA1, &val_start, 1);
-    uint8 val_off   = 0x00;  oledc_command(0xA2, &val_off, 1);
-    uint8 val_vcom  = 0x05;  oledc_command(0xBE, &val_vcom, 1);
-
-    oledc_command(_OLEDC_SLEEP_OFF, NULL_PTR, 0);
-    */
-}
-
-/**
- * @brief OLED C set window
- *
- * @param[in] start_col     start column coordinate
- * @param[in] start_row     start row coordinate
- * @param[in] end_col       end column cordinate
- * @param[in] end_row       end row coordinate
- *
- * Set drawable window for oled c coordinates in ram
- */
-static void set_window(uint8 start_col, uint8 start_row, uint8 end_col, uint8 end_row) {
-    uint8 cols[2] = {_OLEDC_COL_OFF + start_col, _OLEDC_COL_OFF + end_col};
-    uint8 rows[2] = {_OLEDC_ROW_OFF + start_row, _OLEDC_ROW_OFF + end_row};
-
-    oledc_command(_OLEDC_SET_COL_ADDRESS, cols, 2);
-    oledc_command(_OLEDC_SET_ROW_ADDRESS, rows, 2);
-
-    uint8 cmd = _OLEDC_WRITE_RAM;
-    IfxPort_setPinLow(OLED_DC);
-    IfxQspi_SpiMaster_exchange(&g_qspiChannel, &cmd, NULL_PTR, 1);
-    while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
-    IfxPort_setPinHigh(OLED_DC);
+    /* Apply default SSD1351 initialization sequence. */
+    init_set_driver_configuration();
 }
 
 /**
@@ -380,16 +253,21 @@ static void set_window(uint8 start_col, uint8 start_row, uint8 end_col, uint8 en
  * Draw a filled rectangle from start coordiantes to end coordinates
  */
 void oledc_rectangle(uint8 start_col, uint8 start_row, uint8 end_col, uint8 end_row, uint16 color) {
+    // Clamp coordinates to screen boundaries to prevent memory overflow
     if (end_col >= _OLEDC_SCREEN_WIDTH) end_col = _OLEDC_SCREEN_WIDTH - 1;
     if (end_row >= _OLEDC_SCREEN_HEIGHT) end_row = _OLEDC_SCREEN_HEIGHT - 1;
-
+    
+    // Define the write area on the OLED controller
     set_window(start_col, start_row, end_col, end_row);
 
+    // Calculate total pixels and prepare the color buffer (High Byte, Low Byte)
     uint32 count = (end_col - start_col + 1) * (end_row - start_row + 1);
     uint8 colorBytes[2] = {(color >> 8) & 0xFF, color & 0xFF};
 
+    // Stream 16-bit color for each pixel in the window. 
     for (uint32 i = 0; i < count; i++) {
         IfxQspi_SpiMaster_exchange(&g_qspiChannel, colorBytes, NULL_PTR, 2);
+        // Wait for transfer to complete before sending next pixel
         while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
     }
 }
@@ -414,13 +292,17 @@ void oledc_fill_screen(uint16 color) {
  * @param[in] end_row       end row coordinate
  * @param[in] color         color of line
  *
- * Draw a line from specified coordinates to other coordinates with specified color
+ * Draw a line from specified coordinates to other coordinates with specified color.
+ * Note: Diagonal lines not supported by this implementation.
  */
 void oledc_line(uint8 x1, uint8 y1, uint8 x2, uint8 y2, uint16 color) {
+    // Determine if line is vertical or horizontal
     if (x1 == x2) {
+        // Vertical Line: Ensure y1 < y2 for loop/rectangle logic
         if (y1 > y2) { uint8 t = y1; y1 = y2; y2 = t; }
         oledc_rectangle(x1, y1, x1, y2, color);
     } else if (y1 == y2) {
+        // Horizontal Line: Ensure x1 < x2
         if (x1 > x2) { uint8 t = x1; x1 = x2; x2 = t; }
         oledc_rectangle(x1, y1, x2, y1, color);
     }
@@ -429,10 +311,192 @@ void oledc_line(uint8 x1, uint8 y1, uint8 x2, uint8 y2, uint16 color) {
 /**
  * @brief OLED C hud
  *
- * Draw green crosshair
+ * Draw white crosshair
  */
 void oledc_hud(void) {
-    // Draw Green Crosshairs (Center is 48,48)
+    // Draw whitw crosshairs (center is 48,48)
     oledc_line(48, 0, 48, 95, OLEDC_COLOR_WHITE);
     oledc_line(0, 48, 95, 48, OLEDC_COLOR_WHITE);
+}
+
+
+// ################
+// static functions
+// ################
+
+
+/**
+ * @brief OLED C set window
+ *
+ * @param[in] start_col     start column coordinate
+ * @param[in] start_row     start row coordinate
+ * @param[in] end_col       end column cordinate
+ * @param[in] end_row       end row coordinate
+ *
+ * Set drawable window for oled c coordinates in ram
+ */
+static void set_window(uint8 start_col, uint8 start_row, uint8 end_col, uint8 end_row) {
+    /* Convert logical coordinates to controller address space (with offsets). */
+    uint8 cols[2] = {_OLEDC_COL_OFF + start_col, _OLEDC_COL_OFF + end_col};
+    uint8 rows[2] = {_OLEDC_ROW_OFF + start_row, _OLEDC_ROW_OFF + end_row};
+
+    // Send Set Column and Set Row commands
+    oledc_command(_OLEDC_SET_COL_ADDRESS, cols, 2);
+    oledc_command(_OLEDC_SET_ROW_ADDRESS, rows, 2);
+
+    /* After setting column/row range, switch to RAM write mode. */
+    uint8 cmd = _OLEDC_WRITE_RAM;
+    IfxPort_setPinLow(OLED_DC);
+    IfxQspi_SpiMaster_exchange(&g_qspiChannel, &cmd, NULL_PTR, 1);
+    while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
+    
+    // Set DC High. Any subsequent data sent via SPI is now interpreted as pixel data
+    IfxPort_setPinHigh(OLED_DC);
+}
+
+/**
+ * @brief OLED C enable
+ *
+ * @param[in] state (1 = on, 0 = off)
+ *
+ * Set the enable pin high or low, aka on or off
+ */
+static void oledc_enable(uint8 state){
+    if (state == HIGH){
+        IfxPort_setPinHigh(OLED_DC);
+    } else {
+        IfxPort_setPinLow(OLED_DC);
+    }
+}
+
+/**
+ * @brief OLED C command
+ *
+ * @param[in] command         hex command
+ * @param[in] args            pointer to command
+ * @param[in] args_len        length of command
+ *
+ * This is how you communicate with the SSD1351. Sends commands via SPI
+ */
+static void oledc_command(uint8 cmd, uint8 *args, uint16 args_len) {
+    // 1. Send Command Byte
+    IfxPort_setPinLow(OLED_DC); // DC Low = Command
+
+    IfxQspi_SpiMaster_exchange(&g_qspiChannel, &cmd, NULL_PTR, 1);
+    while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
+
+    IfxPort_setPinHigh(OLED_DC); // DC Low = Command
+
+    // 2. Send Arguments (if any)
+    if (args_len > 0 && args != NULL_PTR) {
+        // IfxPort_setPinHigh(OLED_DC); // DC High = Data (Args are data)
+        IfxQspi_SpiMaster_exchange(&g_qspiChannel, args, NULL_PTR, args_len);
+        while (IfxQspi_SpiMaster_getStatus(&g_qspiChannel) == IfxQspi_Status_busy);
+    }
+}
+
+/**
+ * @brief OLED C reset
+ *
+ * Reset sequence as specified by datasheet
+ */
+static void oledc_reset(void) {
+    IfxPort_setPinHigh(OLED_RST);
+    IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 1));
+    IfxPort_setPinLow(OLED_RST);
+    IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 1));
+    IfxPort_setPinHigh(OLED_RST);
+    IfxStm_waitTicks(&MODULE_STM0, IfxStm_getTicksFromMilliseconds(&MODULE_STM0, 100));
+}
+
+/**
+ * @brief OLED C gpio init
+ *
+ * Init the oled c gpio pins
+ */
+static void init_OLED_GPIO(void) {
+    // Configure RST and D/C as push-pull outputs. 
+    IfxPort_setPinModeOutput(OLED_RST, IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
+    IfxPort_setPinModeOutput(OLED_DC,  IfxPort_OutputMode_pushPull, IfxPort_OutputIdx_general);
+
+    // Set default state (High)
+    IfxPort_setPinHigh(OLED_RST);
+}
+
+/**
+ * @brief QSPI1 init
+ *
+ * Init the QSPI1 module
+ */
+static void init_QSPI1_Module(void) {
+    // Initialize Module Configuration Structure with default values
+    IfxQspi_SpiMaster_Config spiMasterConfig;
+    IfxQspi_SpiMaster_initModuleConfig(&spiMasterConfig, &MODULE_QSPI1);
+
+    // Set Master Mode and Interrupt Priorities
+    spiMasterConfig.mode             = IfxQspi_Mode_master;
+    spiMasterConfig.maximumBaudrate  = 20000000; // 20 MHz
+    spiMasterConfig.txPriority       = 10; // Ensure ISRs are installed in main!
+    spiMasterConfig.rxPriority       = 11;
+    spiMasterConfig.erPriority       = 12;
+    spiMasterConfig.isrProvider      = IfxCpu_Irq_getTos(IfxCpu_getCoreIndex());
+
+    // Assign QSPI1 pins for SCLK/MOSI/MISO.
+    const IfxQspi_SpiMaster_Pins pins = {
+        .sclk = &IfxQspi1_SCLK_P10_2_OUT, .sclkMode = IfxPort_OutputMode_pushPull,
+        .mtsr = &IfxQspi1_MTSR_P10_3_OUT, .mtsrMode = IfxPort_OutputMode_pushPull,
+        .mrst = &IfxQspi1_MRSTA_P10_1_IN, .mrstMode = IfxPort_InputMode_pullUp,
+        .pinDriver = IfxPort_PadDriver_cmosAutomotiveSpeed1
+    };
+    spiMasterConfig.pins = &pins;
+    IfxQspi_SpiMaster_initModule(&g_qspi, &spiMasterConfig);
+
+    // Configure the OLED chip-select line and SPI timing. 
+    IfxQspi_SpiMaster_ChannelConfig channelConfig;
+    IfxQspi_SpiMaster_initChannelConfig(&channelConfig, &g_qspi);
+    channelConfig.ch.baudrate = 10000000; // 10 MHz
+    channelConfig.sls.output.pin    = &IfxQspi1_SLSO9_P10_5_OUT;
+    channelConfig.sls.output.mode   = IfxPort_OutputMode_pushPull;
+    channelConfig.sls.output.driver = IfxPort_PadDriver_cmosAutomotiveSpeed1;
+    channelConfig.ch.mode.dataHeading = IfxQspi_DataHeading_msbFirst; // Standard SPI
+
+    IfxQspi_SpiMaster_initChannel(&g_qspiChannel, &channelConfig);
+}
+
+/**
+ * @brief Write the SSD1351 initialization sequence.
+ *
+ * Sends the configuration commands required to put the display into a known
+ * state (addressing mode, contrast, precharge, etc.).
+ */
+static void init_set_driver_configuration(void){
+    // Apply default driver configuration values. 
+
+    // Unlock command entry
+    oledc_command( _OLEDC_COMMAND_LOCK,    &_OLEDC_DEFAULT_OLED_LOCK,     1 );
+    oledc_command( _OLEDC_COMMAND_LOCK,    &_OLEDC_DEFAULT_CMD_LOCK,      1 );
+    
+    // Turn off sleep mode (display off) during config
+    oledc_command( _OLEDC_SLEEP_ON,        0,                      0 );
+    
+    // Configure Memory Mapping, MUX Ratio, and Start Line
+    oledc_command( _OLEDC_SET_REMAP,       &_OLEDC_DEFAULT_REMAP,         1 );
+    oledc_command( _OLEDC_MUX_RATIO,       &_OLEDC_DEFAULT_MUX_RATIO,     1 );
+    oledc_command( _OLEDC_SET_START_LINE,  &_OLEDC_DEFAULT_START_LINE,    1 );
+    oledc_command( _OLEDC_SET_OFFSET,      &_OLEDC_DEFAULT_OFFSET,        1 );
+
+    // Configure Power / voltages / Clock
+    oledc_command( _OLEDC_VCOMH,           &_OLEDC_DEFAULT_VCOMH,         1 );
+    oledc_command( _OLEDC_CLOCK_DIV,       &_OLEDC_DEFAULT_DIVSET,        1 );
+    oledc_command( _OLEDC_SET_RESET_PRECH, &_OLEDC_DEFAULT_PRECHARGE,     1 );
+    oledc_command( _OLEDC_SETSEC_PRECH,    &_OLEDC_DEFAULT_PRECHARGE_2,   1 );
+
+    // Configure Contrast and Gray Scale
+    oledc_command( _OLEDC_MASTER_CONTRAST, &_OLEDC_DEFAULT_MASTER_CONT,   1 );
+    oledc_command( _OLEDC_CONTRAST,        _OLEDC_DEFAULT_CONTRAST,       3 );
+    oledc_command( _OLEDC_VSL,             _OLEDC_DEFAULT_VSL,            3 );
+
+    // Set Display Mode to Normal and wake up
+    oledc_command(_OLEDC_MODE_NORMAL, 0, 0);
+    oledc_command(_OLEDC_SLEEP_OFF, 0, 0);
 }

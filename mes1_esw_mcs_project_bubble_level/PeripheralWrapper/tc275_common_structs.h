@@ -44,11 +44,27 @@
 /*-------------------------------------------------Data Structures---------------------------------------------------*/
 /*********************************************************************************************************************/
 
- typedef struct {
-    sint16 x; /* <- x axis*/
-    sint16 y; /* <- y axis*/
-    sint16 z; /* <- z axis*/
+/**
+ * @struct c6dofimu14_axis_t
+ * @brief 3-axis accelerometer data container.
+ *
+ * Holds signed 16-bit accelerometer readings from a 6-DOF IMU.
+ *
+ * @var c6dofimu14_axis_t::x
+ * Acceleration value along the X axis.
+ *
+ * @var c6dofimu14_axis_t::y
+ * Acceleration value along the Y axis.
+ *
+ * @var c6dofimu14_axis_t::z
+ * Acceleration value along the Z axis.
+ */
+typedef struct {
+    sint16 x; /**< X-axis acceleration */
+    sint16 y; /**< Y-axis acceleration */
+    sint16 z; /**< Z-axis acceleration */
 } c6dofimu14_axis_t;
+
 
 /*********************************************************************************************************************/
 /*--------------------------------------------Private Variables/Constants--------------------------------------------*/

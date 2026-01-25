@@ -13,6 +13,7 @@
 #include <Asclin/Asc/IfxAsclin_Asc.h>
 #include "IfxCpu_Irq.h"
 #include "Bsp.h"
+#include "tc275_uart_app.h"
 
 /*************************************************************************************************************/
 /*------------------------------------------------------Macros-----------------------------------------------*/
@@ -44,18 +45,47 @@ IFX_INTERRUPT(asclin3_Rx_ISR, 0, INTPRIO_ASCLIN3_RX);               // Adding th
 IFX_INTERRUPT(asclin3_Er_ISR, 0, INTPRIO_ASCLIN3_ER);               // Adding the Interrupt Service Routine
 
 
+/**
+ * @brief ASCLIN3 transmit interrupt service routine.
+ *
+ * Delegates the interrupt handling to the iLLD ASC transmit handler for the
+ * configured UART instance.
+ */
 void asclin3_Tx_ISR(void) {
     IfxAsclin_Asc_isrTransmit(&asc);
 }
 
+/**
+ * @brief ASCLIN3 receive interrupt service routine.
+ *
+ * Delegates the interrupt handling to the iLLD ASC receive handler for the
+ * configured UART instance.
+ */
 void asclin3_Rx_ISR(void) {
     IfxAsclin_Asc_isrReceive(&asc);
 }
 
+/**
+ * @brief ASCLIN3 error interrupt service routine.
+ *
+ * Delegates the interrupt handling to the iLLD ASC error handler for the
+ * configured UART instance.
+ */
 void asclin3_Er_ISR(void) {
     IfxAsclin_Asc_isrError(&asc);
 }
 
+/**
+ * @brief Initialize the UART (ASCLIN) module
+ *
+ * Configures the ASCLIN3 module for UART communication with the following settings:
+ * - Baudrate: 115200 bps
+ * - Pins: TX on P15.7, RX on P32.2
+ * - Buffers: Configures Tx and Rx software FIFOs
+ * - Interrupts: Enables Tx, Rx, and Error interrupts with defined priorities.
+ *
+ * This function must be called before any UART transmission occurs.
+ */
 void initUART() {
 
     /* Initialize an instance of IfxAsclin_Asc_Config with default values */
@@ -93,11 +123,23 @@ void initUART() {
 
 }
 
-//Add custom functions for UART communication here
+/**
+ * @brief: a wrapper function of the IfxAsclin_Asc_blockingWrite function
+ * it sends one byte via UART to the receiver
+ * @params: uint8, the byte to be transfered
+ * @return: void
+ */
 void uart_blockingWrite(uint8 byte) {
     IfxAsclin_Asc_blockingWrite(&asc, byte);
 }
 
+/**
+ * @brief: a wrapper function of the IfxAsclin_Asc_write function
+ * it sends a char array to the receiver
+ * @params: uint8 pointer: the char array to be transfered
+ * @params: Ifx_SizeT: the size of the char array
+ * @return: void
+ */
 void uart_sendMessage(uint8 *data, Ifx_SizeT size) {
     IfxAsclin_Asc_write(&asc, data, &size, TIME_INFINITE);
 }
